@@ -1,0 +1,62 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build application
+        run: pnpm build:win
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Read release notes
+        id: release_notes
+        run: |
+          if (Test-Path "release-notes/v${{ steps.version.outputs.VERSION }}.md") {
+            $notes = Get-Content "release-notes/v${{ steps.version.outputs.VERSION }}.md" -Raw
+            $notes = $notes -replace "`r`n", "`n"
+            echo "NOTES<<EOF" >> $env:GITHUB_OUTPUT
+            echo "$notes" >> $env:GITHUB_OUTPUT
+            echo "EOF" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "NOTES=Release v${{ steps.version.outputs.VERSION }}" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Create Release in Public Repo
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
+          body: ${{ steps.release_notes.outputs.NOTES }}
+          draft: false
+          prerelease: false
+          repository: Andersang/Panopticon-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
