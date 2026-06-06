@@ -24,11 +24,6 @@ interface BookmarkWithPath extends SharedBookmark {
   directoryName?: string
 }
 
-interface Directory {
-  path: string
-  name: string
-}
-
 const directories = ref<Record<string, Directory>>({})
 const allBookmarks = ref<BookmarkWithPath[]>([])
 const loading = ref(true)
