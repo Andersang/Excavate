@@ -14,7 +14,7 @@ interface UpdateCheckResult {
 }
 
 class UpdateCheckService {
-  private readonly GITHUB_REPO = 'Andersang/Panopticon-Release' // Update with your GitHub username/repo
+  private readonly GITHUB_REPO = 'Andersang/Panopticon' // Update with your GitHub username/repo
   private readonly CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 hours
   private _lastCheck = 0
   private readonly _statePath = path.join(app.getPath('userData'), 'update-check.json')

@@ -2,23 +2,27 @@
 
 Panopticon is a desktop application for managing and searching through PDF documents with advanced text extraction and bookmarking capabilities.
 
+## Vibe coding experiment notice
+
+Panopticon is also an experiment in vibe-coding, to see how far I can take building a complex application with a focus on user experience, without any manual writing of code. The entire application, including the README, is generated through prompts and interactions with AI tools. This approach allows for rapid iteration and a unique development process, but may also lead to some quirks or inconsistencies as the AI learns and adapts, as well as high api/token costs.
+
 ## Features
 
 - Intelligent search across thousands of PDF pages
 - Text extraction using OCR on your device
 - Bookmarking capabilities for quick access to important pages
 - Real-time file system monitoring
-- Local storage: all data stored in ```documents/Panopticon``` (settings, Python environment, saved searches) and within your library directories (processed indexes)
+- Local storage: all data stored in ```documents/Panopticon``` (settings, saved searches) and within your library directories (processed indexes)
 
 ## Important Notice
 
-Panopticon creates and maintains essential data in two locations. First, a folder named "Panopticon" appears in your documents directory, containing application settings, the Python environment, and saved searches. Second, data folders and configuration files are placed within each library directory you add, preserving your tags and preferences. Removing these folders will result in permanent loss of your stored information and settings.
+Panopticon creates and maintains essential data in two locations. First, a folder named "Panopticon" appears in your documents directory, containing application settings, and saved searches. Second, data folders and configuration files are placed within each library directory you add, preserving your tags and preferences. Removing these folders will result in permanent loss of your stored information and settings.
 
 ## Prerequisites
 
 ### Platform Support
 
-- Windows only (I don't have a Mac to test this on)
+- Windows only (I do not have a Mac to test this on)
 
 ### Document OCR
 
@@ -31,13 +35,12 @@ This section quickly explains how to get Panopticon running, add and index your 
 ### 1. Install (release user)
 
 - Download and install the prerequisites.
-- Download the latest installer from the Releases page: [Panopticon-Releases](https://github.com/Andersang/Panopticon-Release/releases).
+- Download the latest installer from the Releases page: [Panopticon](https://github.com/Andersang/Panopticon/releases).
 - Run the installer and follow on-screen prompts. Panopticon will create a user directory at `%USERPROFILE%\Documents\Panopticon`.
 
-### 2. Settings & system checks
+### 2. Settings & Offline Mode
 
 - Open Settings to configure offline mode, directory preferences and exclude patterns.
-- Use the System Check features to see if required dependencies (Python, Tesseract, Ghostscript) are installed.
 
 ### 3. Open the app & add library directories
 
@@ -65,7 +68,6 @@ Hints:
 ### 6. Document processing & OCR
 
 - Panopticon uses OCR to extract searchable text from scanned PDFs. After adding a file, click `Process` to run OCR and text extraction.
-- By default OCR is performed locally (using Python/Tesseract). If OCR tools are unavailable the app will show what needs installing.
 
 ### 7. Updates
 
@@ -76,7 +78,7 @@ If you need help or want to report a bug, open an issue on the releases repo or 
 
 ## Updates
 
-New releases can be found on Github at [Panopticon-Releases](https://github.com/Andersang/Panopticon-Release/releases).
+New releases can be found on Github at [Panopticon/Release](https://github.com/Andersang/Panopticon/releases).
 
 ## Support Development
 
@@ -134,13 +136,6 @@ You may not:
 **Your Content**: You retain full ownership of all content you process through Panopticon. We claim no rights to your files, notes, or data.
 
 **Our Software**: We own all rights to Panopticon's code, design, and branding. The software is licensed to you, not sold.
-
-## Third Party Services
-
-### OCR Tools
-
-To perform OCR on PDFs, you must install Python, Tesseract, and Ghostscript separately. Panopticon will then create a Python virtual environment for other
- tools such as OCRmyPDF. These tools are governed by their respective licences and terms.
 
 ## Privacy and Data
 

@@ -5,14 +5,14 @@ This guide will help you set up the two-repository workflow where your private r
 ## Overview
 
 - **Private Repo**: `Andersang/Panopticon` (your current repo) - Contains source code
-- **Public Repo**: `Andersang/Panopticon-releases` (to be created) - Contains only releases and documentation
+- **Public Repo**: `Andersang/Panopticon` (to be created) - Contains only releases and documentation
 
 ## Step-by-Step Setup
 
 ### 1. Create the Public Repository
 
 1. Go to https://github.com/new
-2. **Repository name**: `Panopticon-releases`
+2. **Repository name**: `Panopticon`
 3. **Visibility**: **Public** ✓
 4. **Initialize**: Do NOT check any boxes (we'll push content from here)
 5. Click **Create repository**
@@ -60,7 +60,7 @@ git add .
 git commit -m "Initial setup for public releases repository"
 
 # Add remote and push
-git remote add origin https://github.com/Andersang/Panopticon-releases.git
+git remote add origin https://github.com/Andersang/Panopticon.git
 git push -u origin main
 
 # Return to main repo and cleanup
@@ -89,7 +89,7 @@ The GitHub Action will:
 
 ### 6. Verify the Release
 
-1. Go to: https://github.com/Andersang/Panopticon-releases/releases
+1. Go to: https://github.com/Andersang/Panopticon/releases
 2. You should see your release with the `.exe` file attached
 3. Test the download link works publicly (try in incognito mode)
 
@@ -109,12 +109,12 @@ That's it! GitHub Actions handles the rest automatically.
 
 Share this URL for downloads:
 ```
-https://github.com/Andersang/Panopticon-releases/releases/latest
+https://github.com/Andersang/Panopticon/releases/latest
 ```
 
 Or for specific version:
 ```
-https://github.com/Andersang/Panopticon-releases/releases/download/vX.Y.Z/Panopticon-Setup-X.Y.Z.exe
+https://github.com/Andersang/Panopticon/releases/download/vX.Y.Z/Panopticon-Setup-X.Y.Z.exe
 ```
 
 ## Troubleshooting
@@ -125,7 +125,7 @@ https://github.com/Andersang/Panopticon-releases/releases/download/vX.Y.Z/Panopt
 
 ### Release not appearing in public repo
 - Check GitHub Actions tab in private repo for error logs
-- Verify public repo name is correct: `Andersang/Panopticon-releases`
+- Verify public repo name is correct: `Andersang/Panopticon`
 
 ### Token Expired
 - Generate new PAT following Step 2
@@ -137,8 +137,8 @@ If you want to update the README or other docs in the public repo:
 
 ```powershell
 # Clone public repo
-git clone https://github.com/Andersang/Panopticon-releases.git
-cd Panopticon-releases
+git clone https://github.com/Andersang/Panopticon.git
+cd Panopticon
 
 # Make changes to README.md, etc.
 # Commit and push

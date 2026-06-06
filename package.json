@@ -4,7 +4,7 @@
   "description": "Panopticon is a desktop application for managing and searching through PDF documents with advanced text extraction and bookmarking capabilities.",
   "main": "./out/main/index.js",
   "author": "andersang.com",
-  "homepage": "https://github.com/Andersang/Panopticon-Release",
+  "homepage": "https://github.com/Andersang/Panopticon",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",

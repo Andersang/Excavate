@@ -57,6 +57,6 @@ jobs:
           body: ${{ steps.release_notes.outputs.NOTES }}
           draft: false
           prerelease: false
-          repository: Andersang/Panopticon-releases
+          repository: Andersang/Panopticon
         env:
           GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
