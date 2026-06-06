@@ -1,6 +1,6 @@
 {
   "name": "panopticon",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Panopticon is a desktop application for managing and searching through PDF documents with advanced text extraction and bookmarking capabilities.",
   "main": "./out/main/index.js",
   "author": "andersang.com",

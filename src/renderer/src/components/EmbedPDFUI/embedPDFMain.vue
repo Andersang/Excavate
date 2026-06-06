@@ -32,6 +32,9 @@ import BookmarkButton from './BookmarkButton.vue'
 import PageStateTracker from './PageStateTracker.vue'
 import ScrollToPage from './ScrollToPage.vue'
 
+// Import WASM file as URL asset so Vite handles the path correctly
+import pdfiumWasmUrl from '/assets/pdfium.wasm?url'
+
 interface Props {
   filePath?: string
   initialPage?: number
@@ -42,15 +45,12 @@ const props = withDefaults(defineProps<Props>(), {
   filePath: ''
 })
 
-// Use window.location.origin to get the correct dev server URL
-const wasmUrl = `${window.location.origin}/assets/pdfium.wasm`
-
 // Get PDF viewer controls
 const { closePdfViewer } = usePdfViewer(props.viewSource)
 
 // 1. Initialize the engine with the Vue composable
 const { engine, isLoading, error } = usePdfiumEngine({
-  wasmUrl,
+  wasmUrl: pdfiumWasmUrl,
   worker: true
 })
 
@@ -95,7 +95,7 @@ watch(() => props.filePath, async (filePath) => {
 
 // Debug logging
 watchEffect(() => {
-  console.log('[embedPDF] WASM URL:', wasmUrl)
+  console.log('[embedPDF] WASM URL:', pdfiumWasmUrl)
   console.log('[embedPDF] Engine state:', { isLoading: isLoading.value, hasEngine: !!engine.value, error: error.value })
   console.log('[embedPDF] File path:', props.filePath)
   console.log('[embedPDF] PDF URL:', pdfUrl.value)
