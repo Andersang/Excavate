@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, onActivated } from 'vue'
+import { ref, onMounted, onUnmounted, onActivated } from 'vue'
+import type { Directory } from '../../../shared/types'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,19 +23,8 @@ import embedPDFMain from '@renderer/components/EmbedPDFUI/embedPDFMain.vue'
 import FileList from '@/components/FileList.vue'
 import { usePdfViewer } from '@/composables/usePdfViewer'
 import { indexLogger, uiLogger } from '@/utils/logger'
-
-interface Directory {
-  path: string
-  name: string
-  addedAt: string
-  exists: boolean
-  settings: {
-    watchForChanges: boolean
-    excludePatterns: string[]
-    fileTypes: string[]
-  }
-  lastAccessed: string
-}
+import { emitDirectoryUpdated } from '@/utils/appEvents'
+import { formatDate } from '@/utils/format'
 
 interface DirectoryWithFileCount extends Directory {
   fileCount?: number
@@ -53,11 +51,41 @@ interface FileItem {
 
 const indexingDirectories = ref<Set<string>>(new Set())
 const indexingAll = ref(false)
-const selectedDirectoryId = ref<string | null>(null)
+const selectedDirectoryId = ref<string | undefined>(undefined)
 const selectedDirectoryFiles = ref<FileItem[]>([])
 const loadingFiles = ref(false)
 const availableTags = ref<string[]>([])
-const selectedFileId = ref<string | null>(null) // Track selected file for bookmarks
+const selectedFileId = ref<string | undefined>(undefined) // Track selected file for bookmarks
+
+// Confirmation dialog state
+interface ConfirmDialogState {
+  open: boolean
+  title: string
+  message: string
+  onConfirm: () => void | Promise<void>
+}
+const confirmDialogState = ref<ConfirmDialogState>({
+  open: false,
+  title: '',
+  message: '',
+  onConfirm: () => {}
+})
+const notificationMessage = ref<{ type: 'error' | 'success'; text: string } | undefined>(undefined)
+
+const openConfirm = (
+  title: string,
+  message: string,
+  onConfirm: () => void | Promise<void>
+): void => {
+  confirmDialogState.value = { open: true, title, message, onConfirm }
+}
+const handleConfirm = async (): Promise<void> => {
+  confirmDialogState.value.open = false
+  await confirmDialogState.value.onConfirm()
+}
+const clearNotification = (): void => {
+  notificationMessage.value = undefined
+}
 
 // Use PDF Viewer composable
 const {
@@ -82,32 +110,43 @@ const openPdfFromFile = (file: FileItem): void => {
 
 // Handler to close PDF viewer
 const handleClosePdfViewer = (): void => {
-  selectedFileId.value = null
+  selectedFileId.value = undefined
   closePdfViewer()
 }
 
-// Handler when bookmark is added
-// const handleBookmarkAdded = (): void => {
-//   console.log('Bookmark added!')
-// }
+// Named handler so it can be removed in onUnmounted
+const handleDirectoryAddedEvent = async (): Promise<void> => {
+  await loadDirectories()
+}
+
+// Named handler so it can be unregistered in onUnmounted
+const handleDirectoryUpdatedEvent = (
+  event: CustomEvent<{ directoryId: string; fileCount: number }>
+): void => {
+  const { directoryId, fileCount } = event.detail
+  uiLogger.info(`Directory ${directoryId} updated: ${fileCount} files`)
+  if (directoriesWithCounts.value[directoryId]) {
+    directoriesWithCounts.value[directoryId].fileCount = fileCount
+    directoriesWithCounts.value[directoryId].isIndexed = true
+  }
+}
 
 onMounted(async () => {
   await loadDirectories()
 
-  // Listen for automatic directory updates from watcher
+  // IPC push from main process — bridge to typed window event so all
+  // update listeners use the same window event system.
   window.api.directory.onDirectoryUpdated(({ directoryId, fileCount }) => {
-    uiLogger.info(`Directory ${directoryId} updated: ${fileCount} files`)
-    // Update the file count for this directory
-    if (directoriesWithCounts.value[directoryId]) {
-      directoriesWithCounts.value[directoryId].fileCount = fileCount
-      directoriesWithCounts.value[directoryId].isIndexed = true
-    }
+    emitDirectoryUpdated(directoryId, fileCount)
   })
 
-  // Listen for directory-added events to refresh directory list
-  window.addEventListener('directory-added', async () => {
-    await loadDirectories()
-  })
+  window.addEventListener('directory-updated', handleDirectoryUpdatedEvent)
+  window.addEventListener('directory-added', handleDirectoryAddedEvent)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('directory-updated', handleDirectoryUpdatedEvent)
+  window.removeEventListener('directory-added', handleDirectoryAddedEvent)
 })
 
 // Reclaim PDF viewer ownership when returning to this view
@@ -159,8 +198,13 @@ const addDirectory = (): void => {
   showAddDialog.value = true
 }
 
-const handleDirectoryAdded = async (): Promise<void> => {
+const handleDirectoryAdded = async (directoryId?: string): Promise<void> => {
   await loadDirectories()
+
+  // Auto-index the newly added directory
+  if (directoryId && directories.value[directoryId]) {
+    await indexDirectory(directoryId, directories.value[directoryId])
+  }
 }
 
 const indexDirectory = async (id: string, directory: Directory): Promise<void> => {
@@ -171,9 +215,9 @@ const indexDirectory = async (id: string, directory: Directory): Promise<void> =
     // Extract primitive values to avoid passing reactive proxies
     const directoryPath = directory.path
     const fileTypes = [...(directory.settings.fileTypes || ['pdf', 'markdown', 'md'])]
-    
+
     const result = await window.api.directory.index(directoryPath, fileTypes)
-    
+
     if (result.success) {
       if (result.isFirstScan) {
         indexLogger.info(`📂 ${directory.name}: Indexed ${result.fileCount} files`)
@@ -231,7 +275,9 @@ const indexAllDirectories = async (): Promise<void> => {
       }
     }
 
-    indexLogger.info(`Successfully indexed ${successCount}/${existingDirectories.length} directories`)
+    indexLogger.info(
+      `Successfully indexed ${successCount}/${existingDirectories.length} directories`
+    )
     // Reload directories to update file counts
     await loadDirectories()
   } catch (error) {
@@ -241,30 +287,17 @@ const indexAllDirectories = async (): Promise<void> => {
   }
 }
 
-const removeDirectory = async (id: string): Promise<void> => {
-  if (confirm('Are you sure you want to remove this directory from the library?')) {
-    await window.api.settings.removeDirectory(id)
-    await loadDirectories()
-  }
+const removeDirectory = (id: string): void => {
+  openConfirm(
+    'Remove Directory',
+    'Are you sure you want to remove this directory from the library?',
+    async () => {
+      await window.api.settings.removeDirectory(id)
+      await loadDirectories()
+    }
+  )
 }
 
-const openDirectorySettings = (id: string): void => {
-  // TODO: Open settings dialog for this directory
-  uiLogger.debug('Settings for:', id)
-}
-
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays}d ago`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
-  return date.toLocaleDateString()
-}
 
 const selectDirectory = async (id: string, directory: Directory): Promise<void> => {
   if (!directory.exists) return
@@ -278,7 +311,7 @@ const selectDirectory = async (id: string, directory: Directory): Promise<void> 
     if (result.success && result.config) {
       // Load available tags from config
       availableTags.value = result.config.allTags || []
-      
+
       const files = await Promise.all(
         (result.config.fileIndex || []).map(async (f) => {
           // Check if file has been processed by checking for JSON file
@@ -320,7 +353,7 @@ const updateFileTags = async (fileId: string, tags: string[]): Promise<void> => 
   try {
     // Convert to plain array to avoid reactive proxy cloning errors
     const plainTags = [...tags]
-    
+
     const result = await window.api.directory.updateFileTags(directory.path, fileId, plainTags)
     if (result.success) {
       // Use sanitized tags from backend response
@@ -329,7 +362,7 @@ const updateFileTags = async (fileId: string, tags: string[]): Promise<void> => 
       selectedDirectoryFiles.value = selectedDirectoryFiles.value.map((f) =>
         f.id === fileId ? { ...f, tags: sanitizedTags } : f
       )
-      
+
       // Reload available tags from config to get updated allTags list
       const configResult = await window.api.directory.readConfig(directory.path)
       if (configResult.success && configResult.config) {
@@ -337,11 +370,11 @@ const updateFileTags = async (fileId: string, tags: string[]): Promise<void> => 
       }
     } else {
       uiLogger.error('Failed to update tags:', result.error)
-      alert('Failed to update tags: ' + result.error)
+      notificationMessage.value = { type: 'error', text: `Failed to update tags: ${result.error}` }
     }
   } catch (error) {
     uiLogger.error('Error updating tags:', error)
-    alert('Error updating tags')
+    notificationMessage.value = { type: 'error', text: 'Error updating tags.' }
   }
 }
 
@@ -353,10 +386,10 @@ const checkIfProcessed = async (
     const pathParts = filePath.split(/[\\/]/)
     const fileName = pathParts[pathParts.length - 1]
     const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName
-    const directory = pathParts.slice(0, -1).join('\\')
+    const directory = pathParts.slice(0, -1).join('/')
 
     // Check if processed JSON exists
-    const processedPath = `${directory}\\panopticon-processed\\${fileNameWithoutExt}-processed.json`
+    const processedPath = `${directory}/panopticon-processed/${fileNameWithoutExt}-processed.json`
     const exists = await window.api.file.exists(processedPath)
 
     if (!exists) {
@@ -382,7 +415,7 @@ const checkIfProcessed = async (
 }
 
 const closeFileList = (): void => {
-  selectedDirectoryId.value = null
+  selectedDirectoryId.value = undefined
   selectedDirectoryFiles.value = []
 }
 
@@ -418,61 +451,71 @@ const getSelectedFiles = (): FileItem[] => {
 //   return getSelectedFiles().some((f) => f.isProcessed)
 // }
 
-const deleteSelectedFiles = async (): Promise<void> => {
+const deleteSelectedFiles = (): void => {
   const selectedFiles = getSelectedFiles()
   if (selectedFiles.length === 0) return
 
-  const confirmMessage = `Are you sure you want to delete ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}? This cannot be undone.`
-  if (!confirm(confirmMessage)) return
+  openConfirm(
+    'Delete Files',
+    `Are you sure you want to delete ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}? This cannot be undone.`,
+    async () => {
+      try {
+        const dir = directoriesWithCounts.value[selectedDirectoryId.value!]
+        const filePaths = selectedFiles.map((f) => f.path)
+        const result = await window.api.directory.deleteFiles(dir.path, filePaths)
 
-  try {
-    const dir = directoriesWithCounts.value[selectedDirectoryId.value!]
-    const filePaths = selectedFiles.map((f) => f.path)
-    const result = await window.api.directory.deleteFiles(dir.path, filePaths)
-
-    if (result.success) {
-      uiLogger.info(`Deleted ${result.deletedCount} files`)
-      // Reload the file list for this directory
-      if (dir) {
-        await selectDirectory(selectedDirectoryId.value!, dir)
+        if (result.success) {
+          uiLogger.info(`Deleted ${result.deletedCount} files`)
+          if (dir) await selectDirectory(selectedDirectoryId.value!, dir)
+        } else {
+          uiLogger.error('Failed to delete files:', result.error)
+          notificationMessage.value = {
+            type: 'error',
+            text: 'Failed to delete some files. Check the logs for details.'
+          }
+        }
+      } catch (error) {
+        uiLogger.error('Error deleting files:', error)
+        notificationMessage.value = {
+          type: 'error',
+          text: 'An error occurred while deleting files.'
+        }
       }
-    } else {
-      uiLogger.error('Failed to delete files:', result.error)
-      alert('Failed to delete some files. Check console for details.')
     }
-  } catch (error) {
-    uiLogger.error('Error deleting files:', error)
-    alert('An error occurred while deleting files.')
-  }
+  )
 }
 
-const deleteSingleFile = async (file: FileItem): Promise<void> => {
-  if (!confirm(`Are you sure you want to delete "${file.name}"? This cannot be undone.`)) return
+const deleteSingleFile = (file: FileItem): void => {
+  openConfirm(
+    'Delete File',
+    `Are you sure you want to delete "${file.name}"? This cannot be undone.`,
+    async () => {
+      try {
+        const dir = directoriesWithCounts.value[selectedDirectoryId.value!]
+        const result = await window.api.directory.deleteFiles(dir.path, [file.path])
 
-  try {
-    const dir = directoriesWithCounts.value[selectedDirectoryId.value!]
-    const result = await window.api.directory.deleteFiles(dir.path, [file.path])
-
-    if (result.success) {
-      uiLogger.info(`Deleted file: ${file.name}`)
-      // Reload the file list for this directory
-      if (dir) {
-        await selectDirectory(selectedDirectoryId.value!, dir)
+        if (result.success) {
+          uiLogger.info(`Deleted file: ${file.name}`)
+          if (dir) await selectDirectory(selectedDirectoryId.value!, dir)
+        } else {
+          uiLogger.error('Failed to delete file:', result.error)
+          notificationMessage.value = { type: 'error', text: 'Failed to delete file.' }
+        }
+      } catch (error) {
+        uiLogger.error('Error deleting file:', error)
+        notificationMessage.value = {
+          type: 'error',
+          text: 'An error occurred while deleting the file.'
+        }
       }
-    } else {
-      uiLogger.error('Failed to delete file:', result.error)
-      alert('Failed to delete file.')
     }
-  } catch (error) {
-    uiLogger.error('Error deleting file:', error)
-    alert('An error occurred while deleting file.')
-  }
+  )
 }
 
 const processingFiles = ref<Set<string>>(new Set())
 
 // Helper function to chunk array into smaller batches
-const chunk = <T>(array: T[], size: number): T[][] => {
+const chunk = <T,>(array: T[], size: number): T[][] => {
   const chunks: T[][] = []
   for (let i = 0; i < array.length; i += size) {
     chunks.push(array.slice(i, i + size))
@@ -480,109 +523,122 @@ const chunk = <T>(array: T[], size: number): T[][] => {
   return chunks
 }
 
-const processSelectedFiles = async (): Promise<void> => {
+const processSelectedFiles = (): void => {
   const selectedFiles = getSelectedFiles()
-  if (selectedFiles.length === 0) {
-    alert('No files selected')
-    return
-  }
+  if (selectedFiles.length === 0) return
 
   const processedCount = selectedFiles.filter((f) => f.isProcessed).length
   const unprocessedCount = selectedFiles.length - processedCount
 
   let confirmMessage = ''
   if (processedCount > 0 && unprocessedCount > 0) {
-    confirmMessage = `Process ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}?\n\n${unprocessedCount} will be processed\n${processedCount} will be re-processed`
+    confirmMessage = `Process ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}?\n\n${unprocessedCount} will be processed, ${processedCount} will be re-processed.`
   } else if (processedCount > 0) {
     confirmMessage = `Re-process ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}?`
   } else {
     confirmMessage = `Process ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}?`
   }
 
-  if (!confirm(confirmMessage)) return
+  openConfirm('Process Files', confirmMessage, async () => {
+    uiLogger.info(
+      'Processing files:',
+      selectedFiles.map((f) => f.name)
+    )
 
-  uiLogger.info(
-    'Processing files:',
-    selectedFiles.map((f) => f.name)
-  )
+    let successCount = 0
+    let failCount = 0
 
-  let successCount = 0
-  let failCount = 0
+    const CONCURRENCY = 3
+    const batches = chunk(selectedFiles, CONCURRENCY)
 
-  // Process files with concurrency limit of 3
-  const CONCURRENCY = 3
-  const batches = chunk(selectedFiles, CONCURRENCY)
+    for (const batch of batches) {
+      await Promise.all(
+        batch.map(async (file) => {
+          processingFiles.value.add(file.id)
 
-  for (const batch of batches) {
-    await Promise.all(
-      batch.map(async (file) => {
-        processingFiles.value.add(file.id)
-
-        try {
-          // If file is already processed, delete the existing JSON first
-          if (file.isProcessed) {
-            uiLogger.debug(`Deleting existing processed file for: ${file.name}`)
-            const pathParts = file.path.split(/[\\/]/)
-            const fileName = pathParts[pathParts.length - 1]
-            const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName
-            const directory = pathParts.slice(0, -1).join('\\')
-            const processedPath = `${directory}\\panopticon-processed\\${fileNameWithoutExt}-processed.json`
-
-            try {
-              await window.api.file.delete(processedPath)
-              uiLogger.debug(`Deleted: ${processedPath}`)
-            } catch (deleteError) {
-              uiLogger.warn(`Could not delete existing processed file: ${deleteError}`)
+          try {
+            if (file.isProcessed) {
+              uiLogger.debug(`Deleting existing processed file for: ${file.name}`)
+              const dir = file.path.replace(/[\\/][^\\/]+$/, '')
+              const fileName = file.path.replace(/.*[\\/]/, '')
+              const fileNameWithoutExt =
+                fileName.substring(0, fileName.lastIndexOf('.')) || fileName
+              const sep = file.path.includes('\\') ? '\\' : '/'
+              const processedPath = `${dir}${sep}panopticon-processed${sep}${fileNameWithoutExt}-processed.json`
+              try {
+                await window.api.file.delete(processedPath)
+              } catch (deleteError) {
+                uiLogger.warn(`Could not delete existing processed file: ${deleteError}`)
+              }
             }
-          }
 
-          uiLogger.debug(`Processing: ${file.name}`)
-          const result = await window.api.document.process(file.path)
+            uiLogger.debug(`Processing: ${file.name}`)
+            const result = await window.api.document.process(file.path)
 
-          if (result.success) {
-            uiLogger.info(`✓ Processed: ${file.name}`)
-            successCount++
-            // Get updated processing status
-            const { isProcessed, processingMethod } = await checkIfProcessed(file.path)
-            // Update file status
-            selectedDirectoryFiles.value = selectedDirectoryFiles.value.map((f) =>
-              f.id === file.id ? { ...f, isProcessed, processingMethod } : f
-            )
-          } else {
-            uiLogger.error(`✗ Failed to process ${file.name}:`, result.error)
+            if (result.success) {
+              uiLogger.info(`✓ Processed: ${file.name}`)
+              successCount++
+              const { isProcessed, processingMethod } = await checkIfProcessed(file.path)
+              selectedDirectoryFiles.value = selectedDirectoryFiles.value.map((f) =>
+                f.id === file.id ? { ...f, isProcessed, processingMethod } : f
+              )
+            } else {
+              uiLogger.error(`✗ Failed to process ${file.name}:`, result.error)
+              failCount++
+            }
+          } catch (error) {
+            uiLogger.error(`Error processing ${file.name}:`, error)
             failCount++
-            alert(`Failed to process ${file.name}: ${result.error}`)
+          } finally {
+            processingFiles.value.delete(file.id)
           }
-        } catch (error) {
-          uiLogger.error(`Error processing ${file.name}:`, error)
-          failCount++
-          alert(`Error processing ${file.name}`)
-        } finally {
-          processingFiles.value.delete(file.id)
-        }
-      })
-    )
-  }
+        })
+      )
+    }
 
-  // Show summary
-  if (failCount === 0) {
-    alert(
-      `Processing complete! Successfully processed ${successCount} file${successCount !== 1 ? 's' : ''}.`
-    )
-  } else {
-    alert(`Processing complete with errors.\n\nSuccessful: ${successCount}\nFailed: ${failCount}`)
-  }
+    if (failCount === 0) {
+      notificationMessage.value = {
+        type: 'success',
+        text: `Processing complete — ${successCount} file${successCount !== 1 ? 's' : ''} processed.`
+      }
+    } else {
+      notificationMessage.value = {
+        type: 'error',
+        text: `Processing complete with errors. Successful: ${successCount}, Failed: ${failCount}.`
+      }
+    }
+  })
 }
 </script>
 
 <template>
   <div class="h-full w-full flex flex-col overflow-hidden">
+    <!-- Notification banner -->
+    <div
+      v-if="notificationMessage"
+      :class="[
+        'flex items-center justify-between px-4 py-2 text-sm shrink-0',
+        notificationMessage.type === 'error'
+          ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+          : 'bg-green-500/10 text-green-700 dark:text-green-400'
+      ]"
+    >
+      <span>{{ notificationMessage.text }}</span>
+      <button class="ml-4 text-xs opacity-60 hover:opacity-100" @click="clearNotification">
+        ✕
+      </button>
+    </div>
     <!-- When NO PDF is open OR no directory selected: Show directories and files side by side -->
-    <div v-if="!isOwnPdfViewer || !selectedDirectoryId" class="flex-1 flex flex-col overflow-hidden">
+    <div
+      v-if="!isOwnPdfViewer || !selectedDirectoryId"
+      class="flex-1 flex flex-col overflow-hidden"
+    >
       <div class="flex flex-wrap items-center justify-between gap-4 p-6 shrink-0">
         <div class="min-w-0">
           <h1 class="truncate">Library</h1>
-          <p class="text-sm text-muted-foreground mt-1 truncate">Manage directories to index and search</p>
+          <p class="text-sm text-muted-foreground mt-1 truncate">
+            Manage directories to index and search
+          </p>
         </div>
         <div v-if="Object.keys(directories).length > 0" class="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" @click="loadDirectories"> ↻ </Button>
@@ -706,9 +762,6 @@ const processSelectedFiles = async (): Promise<void> => {
                           indexingDirectories.has(id as string) ? 'Indexing...' : 'Index Directory'
                         }}
                       </DropdownMenuItem>
-                      <DropdownMenuItem @click="openDirectorySettings(id as string)">
-                        Settings
-                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         class="text-red-500 focus:text-red-500"
@@ -762,7 +815,11 @@ const processSelectedFiles = async (): Promise<void> => {
           :processing-files="processingFiles"
           :show-header="true"
           header-title="Files"
-          :header-subtitle="selectedDirectoryId && directories[selectedDirectoryId] ? `in ${directories[selectedDirectoryId].name}` : ''"
+          :header-subtitle="
+            selectedDirectoryId && directories[selectedDirectoryId]
+              ? `in ${directories[selectedDirectoryId].name}`
+              : ''
+          "
           @file-click="openPdfFromFile"
           @toggle-selection="toggleFileSelection"
           @toggle-select-all="toggleSelectAll"
@@ -780,7 +837,7 @@ const processSelectedFiles = async (): Promise<void> => {
 
       <!-- PDF Viewer (right side) -->
       <div class="pdf-viewer-panel h-full overflow-hidden" :style="{ width: `${pdfPanelWidth}%` }">
-                <embedPDFMain
+        <embedPDFMain
           v-show="isOwnPdfViewer && selectedPdfPath"
           :key="`library-${selectedPdfPath}`"
           :file-path="selectedPdfPath || undefined"
@@ -795,6 +852,22 @@ const processSelectedFiles = async (): Promise<void> => {
   <AddDirectoryDialog
     :open="showAddDialog"
     @update:open="(val) => (showAddDialog = val)"
-    @directory-added="handleDirectoryAdded"
+    @directory-added="(id: string) => handleDirectoryAdded(id)"
   />
+
+  <!-- Confirmation Dialog -->
+  <Dialog :open="confirmDialogState.open" @update:open="(v) => (confirmDialogState.open = v)">
+    <DialogContent class="sm:max-w-[420px]">
+      <DialogHeader>
+        <DialogTitle>{{ confirmDialogState.title }}</DialogTitle>
+        <DialogDescription style="white-space: pre-line">{{
+          confirmDialogState.message
+        }}</DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="outline" @click="confirmDialogState.open = false">Cancel</Button>
+        <Button variant="destructive" @click="handleConfirm">Confirm</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>

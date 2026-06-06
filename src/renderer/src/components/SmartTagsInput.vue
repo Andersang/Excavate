@@ -27,22 +27,19 @@ const emit = defineEmits<{
 const inputValue = ref('')
 const showSuggestions = ref(false)
 const selectedSuggestionIndex = ref(0)
-const inputRef = ref<HTMLInputElement | null>(null)
+const inputRef = ref<HTMLInputElement | undefined>(undefined)
 
 // Filter suggestions based on input
 const suggestions = computed(() => {
   if (!inputValue.value.trim()) {
     return []
   }
-  
+
   const query = inputValue.value.toLowerCase()
-  const currentTags = props.modelValue.map(t => t.toLowerCase())
-  
+  const currentTags = props.modelValue.map((t) => t.toLowerCase())
+
   return props.availableTags
-    .filter(tag => 
-      tag.toLowerCase().includes(query) && 
-      !currentTags.includes(tag.toLowerCase())
-    )
+    .filter((tag) => tag.toLowerCase().includes(query) && !currentTags.includes(tag.toLowerCase()))
     .slice(0, 5) // Limit to 5 suggestions
 })
 
@@ -67,7 +64,7 @@ const clearInput = () => {
 
 const handleKeyDown = (event: KeyboardEvent) => {
   if (!showSuggestions.value) return
-  
+
   if (event.key === 'ArrowDown') {
     event.preventDefault()
     selectedSuggestionIndex.value = Math.min(
@@ -88,7 +85,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 const applySuggestion = async (tag: string) => {
   emit('update:modelValue', [...props.modelValue, tag])
   showSuggestions.value = false
-  
+
   // Clear the input field
   await nextTick()
   clearInput()
@@ -103,16 +100,12 @@ const handleTagsUpdate = (newTags: AcceptableInputValue[]): void => {
 
 <template>
   <div class="relative">
-    <TagsInput :model-value="modelValue" @update:model-value="handleTagsUpdate" class="w-full">
+    <TagsInput :model-value="modelValue" class="w-full" @update:model-value="handleTagsUpdate">
       <TagsInputItem v-for="tag in modelValue" :key="tag" :value="tag">
         <TagsInputItemText />
         <TagsInputItemDelete />
       </TagsInputItem>
-      <TagsInputInput
-        :placeholder="placeholder"
-        @input="handleInput"
-        @keydown="handleKeyDown"
-      />
+      <TagsInputInput :placeholder="placeholder" @input="handleInput" @keydown="handleKeyDown" />
     </TagsInput>
 
     <!-- Suggestions Dropdown -->

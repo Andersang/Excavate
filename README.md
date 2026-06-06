@@ -22,11 +22,7 @@ Panopticon creates and maintains essential data in two locations. First, a folde
 
 ### Document OCR
 
-PDFs are processed locally with the help of [OCRmyPDF](https://github.com/ocrmypdf/OCRmyPDF). To process these PDFs yourself you must first install these packages:
-
-- [Python 3.11+](https://www.python.org/downloads/)
-- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
-- [Ghostscript](https://www.ghostscript.com/releases/gsdnld.html)
+PDFs are processed locally using Tesseract.js, a pure JavaScript OCR library with no external dependencies. This means all text extraction happens on your device, ensuring privacy and offline functionality.
 
 ## How to use
 
@@ -38,14 +34,10 @@ This section quickly explains how to get Panopticon running, add and index your 
 - Download the latest installer from the Releases page: [Panopticon-Releases](https://github.com/Andersang/Panopticon-Release/releases).
 - Run the installer and follow on-screen prompts. Panopticon will create a user directory at `%USERPROFILE%\Documents\Panopticon`.
 
-\
-
 ### 2. Settings & system checks
 
 - Open Settings to configure offline mode, directory preferences and exclude patterns.
 - Use the System Check features to see if required dependencies (Python, Tesseract, Ghostscript) are installed.
-
-\
 
 ### 3. Open the app & add library directories
 
@@ -53,14 +45,10 @@ This section quickly explains how to get Panopticon running, add and index your 
 2. Click the + (Add Directory) button in the left sidebar to add folders to your library.
 3. Choose file types to index (PDF is the default). The app will scan your selected folders and build a local search index.
 
-\
-
 Hints:
 
 - First scan may take a while depending on the number and size of files. You can continue using the app while the initial indexing runs.
 - If a folder has many large PDFs, consider allowing the app a few minutes to finish before performing heavy searches.
-
-\
 
 ### 4. Searching
 
@@ -68,36 +56,21 @@ Hints:
 2. Search suggestions and saved queries may appear as you type.
 3. Use quotes to force exact matches and common boolean operators (AND, OR) for narrower searches.
 
-\
-
 ### 5. Managing bookmarks
 
 1. While viewing a PDF, click the bookmark icon to store the current page and add notes or tags.
 2. Bookmarks are saved per-file and are visible in the Bookmarks view.
 3. Use tags on bookmarks to organise them and speed up future searches.
 
-\
-
 ### 6. Document processing & OCR
 
 - Panopticon uses OCR to extract searchable text from scanned PDFs. After adding a file, click `Process` to run OCR and text extraction.
 - By default OCR is performed locally (using Python/Tesseract). If OCR tools are unavailable the app will show what needs installing.
 
-\
-
-Tips:
-
-- Make sure Python 3.11+, Tesseract OCR and Ghostscript are installed and available on PATH for reliable OCR processing.
-- The first OCR pass can take longer; subsequent updates are incremental.
-
-\
-
 ### 7. Updates
 
 - Panopticon checks GitHub releases for updates automatically (every 24 hours) and notifies you on the About page if a new version exists.
 - You can manually check for updates from the About page or use Settings → Check for updates.
-
-\
 
 If you need help or want to report a bug, open an issue on the releases repo or contact me at [andersang.wl@gmail.com](mailto:andersang.wl@gmail.com).
 
@@ -137,15 +110,9 @@ We own and reserve rights to our own content, including the application's text, 
 
 By using Panopticon, you agree to our [Terms of Service](#terms-of-service). Please read these terms carefully, as they outline our relationship, including provisions for licensing, security, privacy, liability, and dispute resolution.
 
-## Why Not Open Source?
-
-Panopticon isn't open-sourced because we wish to preserve the option of building a sustainable, commercial future for it. Keeping the code private helps prevent low-effort clones or repackaged versions that could dilute its quality or confuse users.
-
-Every version released will continue to work indefinitely, provided your operating system supports it. The goal is to keep Panopticon accessible, reliable, and entirely under your control, whilst allowing us to explore ways to sustain its development over time.
-
 ## Terms of Service
 
-**Last updated: [Date]**
+**Last updated: 06-06-2026**
 
 ## Agreement
 
@@ -205,7 +172,7 @@ You agree to:
 - Not use the software to harm others or their property
 - Not upload or process content that infringes third party rights
 
-You are solely responsible for ensuring your use of Panopticon complies with relevant regulations, including those of the Board of Architects Singapore.
+You are solely responsible for ensuring your use of Panopticon complies with relevant regulations.
 
 ## Termination
 

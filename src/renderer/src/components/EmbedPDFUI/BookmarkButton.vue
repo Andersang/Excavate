@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { BookmarkIcon } from 'lucide-vue-next'
+import { emitBookmarkAdded } from '@/utils/appEvents'
 import { useScroll } from '@embedpdf/plugin-scroll/vue'
 import SmartTagsInput from '@/components/SmartTagsInput.vue'
+import { useNotification } from '@/composables/useNotification'
+import { viewLogger } from '@/utils/logger'
 
 interface Props {
   filePath?: string
@@ -13,6 +16,7 @@ const props = defineProps<Props>()
 // Get current page from scroll state
 const { state } = useScroll()
 const currentPage = computed(() => state.value?.currentPage || 1)
+const { error: showError, success: showSuccess } = useNotification()
 
 const showDialog = ref(false)
 const bookmarkName = ref('')
@@ -43,18 +47,18 @@ const findFileInfo = async (): Promise<{ directoryPath: string; fileId: string }
       }
     }
   } catch (error) {
-    console.error('[BookmarkButton] Error finding file info:', error)
+    viewLogger.error('[BookmarkButton] Error finding file info:', error)
   }
 
   return null
 }
 
 const handleAddBookmark = async (): Promise<void> => {
-  console.log('[BookmarkButton] Adding bookmark for page:', currentPage.value)
+  viewLogger.debug('[BookmarkButton] Adding bookmark for page:', currentPage.value)
   bookmarkName.value = ''
   bookmarkTags.value = []
   bookmarkNotes.value = ''
-  
+
   // Load available tags
   try {
     const fileInfo = await findFileInfo()
@@ -65,27 +69,27 @@ const handleAddBookmark = async (): Promise<void> => {
       }
     }
   } catch (error) {
-    console.error('[BookmarkButton] Error loading tags:', error)
+    viewLogger.error('[BookmarkButton] Error loading tags:', error)
   }
-  
+
   showDialog.value = true
 }
 
 const handleSaveBookmark = async (): Promise<void> => {
   if (!bookmarkName.value.trim()) {
-    alert('Please enter a bookmark name')
+    showError('Please enter a bookmark name')
     return
   }
 
-  console.log('[BookmarkButton] Current page:', currentPage.value)
+  viewLogger.debug('[BookmarkButton] Current page:', currentPage.value)
   isSaving.value = true
 
   try {
     const fileInfo = await findFileInfo()
 
     if (!fileInfo) {
-      console.error('[BookmarkButton] Cannot find directory or file ID')
-      alert('Unable to save bookmark: file not found in any directory')
+      viewLogger.error('[BookmarkButton] Cannot find directory or file ID')
+      showError('Unable to save bookmark: file not found in any directory')
       return
     }
 
@@ -101,22 +105,22 @@ const handleSaveBookmark = async (): Promise<void> => {
       notes: bookmarkNotes.value.trim() || undefined
     }
 
-    console.log('[BookmarkButton] Saving bookmark:', plainBookmark)
+    viewLogger.debug('[BookmarkButton] Saving bookmark:', plainBookmark)
 
     const result = await window.api.bookmark.add(fileInfo.directoryPath, plainBookmark)
 
     if (result.success) {
-      console.log('[BookmarkButton] Bookmark added successfully:', result.bookmark)
+      viewLogger.info('[BookmarkButton] Bookmark added successfully:', result.bookmark)
       showDialog.value = false
-      // Dispatch event to refresh bookmarks in parent views
-      window.dispatchEvent(new CustomEvent('bookmark-added'))
+      emitBookmarkAdded()
+      showSuccess('Bookmark added successfully')
     } else {
-      console.error('[BookmarkButton] Failed to add bookmark:', result.error)
-      alert('Failed to add bookmark: ' + result.error)
+      viewLogger.error('[BookmarkButton] Failed to add bookmark:', result.error)
+      showError('Failed to add bookmark: ' + result.error)
     }
   } catch (error) {
-    console.error('[BookmarkButton] Error adding bookmark:', error)
-    alert('Error adding bookmark')
+    viewLogger.error('[BookmarkButton] Error adding bookmark:', error)
+    showError('Error adding bookmark')
   } finally {
     isSaving.value = false
   }

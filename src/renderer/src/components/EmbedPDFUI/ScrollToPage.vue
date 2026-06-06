@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useScroll } from '@embedpdf/plugin-scroll/vue'
+import { viewLogger } from '@/utils/logger'
 
 interface Props {
   targetPage?: number
@@ -10,20 +11,25 @@ const props = defineProps<Props>()
 const { provides: scroll } = useScroll()
 
 const scrollToPage = (page: number): void => {
-  console.log('[ScrollToPage] Attempting to scroll to page:', page, 'Scroll available:', !!scroll.value)
+  viewLogger.debug(
+    '[ScrollToPage] Attempting to scroll to page:',
+    page,
+    'Scroll available:',
+    !!scroll.value
+  )
   if (scroll.value) {
     scroll.value.scrollToPage({
       pageNumber: page,
       behavior: 'instant'
     })
   } else {
-    console.log('[ScrollToPage] Scroll not available yet, waiting...')
+    viewLogger.debug('[ScrollToPage] Scroll not available yet, waiting...')
     // If scroll not available, watch for it
     const unwatch = watch(
       scroll,
       (scrollCapability) => {
         if (scrollCapability) {
-          console.log('[ScrollToPage] Scroll now available, scrolling to:', page)
+          viewLogger.debug('[ScrollToPage] Scroll now available, scrolling to:', page)
           scrollCapability.scrollToPage({
             pageNumber: page,
             behavior: 'instant'
@@ -40,7 +46,7 @@ const scrollToPage = (page: number): void => {
 watch(
   () => props.targetPage,
   (newPage, oldPage) => {
-    console.log('[ScrollToPage] targetPage changed from', oldPage, 'to', newPage)
+    viewLogger.debug('[ScrollToPage] targetPage changed from', oldPage, 'to', newPage)
     if (newPage && newPage > 1) {
       setTimeout(() => {
         scrollToPage(newPage)

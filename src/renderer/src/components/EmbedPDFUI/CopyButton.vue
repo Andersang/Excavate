@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useSelectionCapability, type SelectionRangeX } from '@embedpdf/plugin-selection/vue'
 import { Copy, Check } from 'lucide-vue-next'
+import { viewLogger } from '@/utils/logger'
 
 const { provides: selection } = useSelectionCapability()
 const showCopied = ref(false)
@@ -11,11 +12,11 @@ const hasSelection = ref(false)
 watch(
   selection,
   (newSelection) => {
-    console.log('[CopyButton] Selection changed:', newSelection)
+    viewLogger.debug('[CopyButton] Selection changed:', newSelection)
     if (newSelection) {
-      console.log('[CopyButton] Setting up onSelectionChange listener')
+      viewLogger.debug('[CopyButton] Setting up onSelectionChange listener')
       newSelection.onSelectionChange((sel: SelectionRangeX | null) => {
-        console.log('[CopyButton] Selection change detected:', sel)
+        viewLogger.debug('[CopyButton] Selection change detected:', sel)
         hasSelection.value = !!sel
       })
     }
@@ -33,7 +34,7 @@ const copyToClipboard = async (): Promise<void> => {
       showCopied.value = false
     }, 2000)
   } catch (err) {
-    console.error('Failed to copy text:', err)
+    viewLogger.error('Failed to copy text:', err)
   }
 }
 
@@ -57,7 +58,6 @@ onUnmounted(() => {
 <template>
   <button
     v-if="hasSelection"
-    @click="copyToClipboard"
     class="p-2 rounded transition-colors"
     :class="
       showCopied
@@ -65,6 +65,7 @@ onUnmounted(() => {
         : 'bg-primary hover:bg-primary/90 text-primary-foreground'
     "
     :title="showCopied ? 'Copied!' : 'Copy selection (Ctrl+C)'"
+    @click="copyToClipboard"
   >
     <Check v-if="showCopied" :size="18" />
     <Copy v-else :size="18" />

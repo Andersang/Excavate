@@ -9,14 +9,18 @@ import { Scroller, ScrollPluginPackage, ScrollStrategy } from '@embedpdf/plugin-
 import { LoaderPluginPackage } from '@embedpdf/plugin-loader/vue'
 import { RenderLayer, RenderPluginPackage } from '@embedpdf/plugin-render/vue'
 import { TilingLayer, TilingPluginPackage } from '@embedpdf/plugin-tiling/vue'
-import { InteractionManagerPluginPackage, PagePointerProvider, GlobalPointerProvider } from '@embedpdf/plugin-interaction-manager/vue'
+import {
+  InteractionManagerPluginPackage,
+  PagePointerProvider,
+  GlobalPointerProvider
+} from '@embedpdf/plugin-interaction-manager/vue'
 import { SelectionPluginPackage, SelectionLayer } from '@embedpdf/plugin-selection/vue'
 import { ThumbnailPluginPackage } from '@embedpdf/plugin-thumbnail/vue'
 import { ZoomMode, ZoomPluginPackage, MarqueeZoom } from '@embedpdf/plugin-zoom/vue'
 import { PanPluginPackage } from '@embedpdf/plugin-pan/vue'
 import { SearchPluginPackage, SearchLayer } from '@embedpdf/plugin-search/vue'
 import { Search as SearchIcon, Sidebar as SidebarIcon, Loader2, X } from 'lucide-vue-next'
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect, watch, onUnmounted } from 'vue'
 import { usePdfViewer } from '@/composables/usePdfViewer'
 
 import Sidebar from './Sidebar.vue'
@@ -38,7 +42,8 @@ const props = withDefaults(defineProps<Props>(), {
   filePath: ''
 })
 
-const wasmUrl = new URL('./pdfium.wasm', import.meta.url).href
+// Use window.location.origin to get the correct dev server URL
+const wasmUrl = `${window.location.origin}/assets/pdfium.wasm`
 
 // Get PDF viewer controls
 const { closePdfViewer } = usePdfViewer(props.viewSource)
@@ -53,18 +58,55 @@ const { engine, isLoading, error } = usePdfiumEngine({
 const showSidebar = ref(true)
 const showSearch = ref(false)
 
-// Convert file path to file:// URL
-const pdfUrl = computed(() => {
-  if (!props.filePath) return ''
-  // Convert Windows path to file URL
-  const normalized = props.filePath.replace(/\\/g, '/')
-  return `file:///${normalized}`
+// Load PDF via IPC and create blob URL
+const pdfUrl = ref<string>('')
+const loadingPdf = ref(false)
+const pdfError = ref<string | null>(null)
+
+watch(() => props.filePath, async (filePath) => {
+  // Clean up previous blob URL
+  if (pdfUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(pdfUrl.value)
+  }
+  pdfUrl.value = ''
+  pdfError.value = null
+  
+  if (!filePath) return
+  
+  try {
+    loadingPdf.value = true
+    console.log('[embedPDF] Loading PDF via IPC:', filePath)
+    
+    // Read PDF via IPC
+    const array = await window.api.file.readPdf(filePath)
+    const uint8Array = new Uint8Array(array)
+    const blob = new Blob([uint8Array], { type: 'application/pdf' })
+    const blobUrl = URL.createObjectURL(blob)
+    
+    pdfUrl.value = blobUrl
+    console.log('[embedPDF] PDF loaded successfully, blob URL:', blobUrl)
+  } catch (err) {
+    console.error('[embedPDF] Error loading PDF:', err)
+    pdfError.value = (err as Error).message
+  } finally {
+    loadingPdf.value = false
+  }
+}, { immediate: true })
+
+// Debug logging
+watchEffect(() => {
+  console.log('[embedPDF] WASM URL:', wasmUrl)
+  console.log('[embedPDF] Engine state:', { isLoading: isLoading.value, hasEngine: !!engine.value, error: error.value })
+  console.log('[embedPDF] File path:', props.filePath)
+  console.log('[embedPDF] PDF URL:', pdfUrl.value)
+  console.log('[embedPDF] Loading PDF:', loadingPdf.value)
+  console.log('[embedPDF] PDF Error:', pdfError.value)
 })
 
 // 2. Register the plugins you need
 const plugins = computed(() => {
   if (!pdfUrl.value) return []
-  
+
   return [
     createPluginRegistration(LoaderPluginPackage, {
       loadingOptions: {
@@ -113,6 +155,13 @@ const toggleSidebar = () => {
 const toggleSearch = () => {
   showSearch.value = !showSearch.value
 }
+
+// Cleanup blob URL on unmount
+onUnmounted(() => {
+  if (pdfUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(pdfUrl.value)
+  }
+})
 </script>
 
 <template>
@@ -123,7 +172,13 @@ const toggleSearch = () => {
     <div v-else-if="error" class="flex items-center justify-center h-full text-destructive p-5">
       Error loading PDF engine: {{ error }}
     </div>
-    <div v-else-if="isLoading || !engine" class="flex items-center justify-center h-full text-muted-foreground">
+    <div v-else-if="pdfError" class="flex items-center justify-center h-full text-destructive p-5">
+      Error loading PDF: {{ pdfError }}
+    </div>
+    <div
+      v-else-if="isLoading || !engine || loadingPdf || !pdfUrl"
+      class="flex items-center justify-center h-full text-muted-foreground"
+    >
       <Loader2 :size="48" class="animate-spin" />
     </div>
 
@@ -141,15 +196,15 @@ const toggleSearch = () => {
             >
               <SidebarIcon :size="18" />
             </button>
-            
+
             <ZoomControlsSimple />
-            
+
             <CopyButton />
           </div>
-          
+
           <!-- Center: Page indicator -->
           <PageIndicator />
-          
+
           <!-- Right: Bookmark + Search + Close -->
           <div class="flex items-center gap-2">
             <BookmarkButton :file-path="props.filePath" />
@@ -173,16 +228,22 @@ const toggleSearch = () => {
 
         <div class="flex w-full h-full overflow-hidden">
           <!-- Left Sidebar (Thumbnails) -->
-          <div v-if="showSidebar" class="w-[200px] min-w-[200px] h-full border-r border-border bg-background">
+          <div
+            v-if="showSidebar"
+            class="w-[200px] min-w-[200px] h-full border-r border-border bg-background"
+          >
             <Sidebar />
           </div>
-          
+
           <!-- Main PDF viewer -->
           <div class="flex-1 h-full overflow-hidden relative">
             <GlobalPointerProvider>
               <PageStateTracker :view-source="props.viewSource" />
               <ScrollToPage :target-page="props.initialPage" />
-              <Viewport class="w-full h-full bg-background overflow-auto pdf-viewport" @dragstart.prevent>
+              <Viewport
+                class="w-full h-full bg-background overflow-auto pdf-viewport"
+                @dragstart.prevent
+              >
                 <Scroller>
                   <template #default="{ page }">
                     <PagePointerProvider
@@ -193,7 +254,11 @@ const toggleSearch = () => {
                       :scale="page.scale"
                     >
                       <RenderLayer :page-index="page.pageIndex" style="pointer-events: none" />
-                      <TilingLayer :page-index="page.pageIndex" :scale="page.scale" style="pointer-events: none" />
+                      <TilingLayer
+                        :page-index="page.pageIndex"
+                        :scale="page.scale"
+                        style="pointer-events: none"
+                      />
                       <MarqueeZoom :page-index="page.pageIndex" :scale="page.scale" />
                       <SearchLayer :page-index="page.pageIndex" :scale="page.scale" />
                       <SelectionLayer :page-index="page.pageIndex" :scale="page.scale" />
@@ -205,7 +270,10 @@ const toggleSearch = () => {
           </div>
 
           <!-- Right Drawer (Search) -->
-          <div v-if="showSearch" class="w-[300px] min-w-[300px] h-full border-l border-border bg-background">
+          <div
+            v-if="showSearch"
+            class="w-[300px] min-w-[300px] h-full border-l border-border bg-background"
+          >
             <Search />
           </div>
         </div>

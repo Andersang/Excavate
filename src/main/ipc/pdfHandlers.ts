@@ -1,10 +1,9 @@
 import { ipcMain } from 'electron'
 import { pdfTempService } from '../services/pdfTempService'
-import { pythonEnvService } from '../services/pythonEnvService'
-import { promisify } from 'util'
-import { exec } from 'child_process'
-
-const execAsync = promisify(exec)
+import { readFile } from 'fs/promises'
+import { PDFParse } from 'pdf-parse'
+import { pdfLogger } from '../utils/logger'
+import { isPathAllowed } from '../utils/pathValidation'
 
 /**
  * Register PDF-related IPC handlers
@@ -27,23 +26,21 @@ export function registerPdfHandlers(): void {
   })
 
   ipcMain.handle('pdf:get-page-count', async (_, pdfPath: string) => {
+    if (!isPathAllowed(pdfPath)) {
+      pdfLogger.warn('pdf:get-page-count rejected path outside allowed roots:', pdfPath)
+      return 1 // Default to 1 page — do not leak path info
+    }
     try {
-      const venvStatus = await pythonEnvService.checkVenvStatus()
-      if (!venvStatus.exists) {
-        throw new Error('Python virtual environment not found')
+      const buf = await readFile(pdfPath)
+      const parser = new PDFParse({ data: buf })
+      try {
+        const result = await parser.getText()
+        return result.total
+      } finally {
+        await parser.destroy()
       }
-
-      const pythonPath = pythonEnvService.getPythonExecutable()
-      const command = `"${pythonPath}" -c "import PyPDF2; reader = PyPDF2.PdfReader('${pdfPath.replace(/\\/g, '\\\\')}'); print(len(reader.pages))"`
-
-      const { stdout } = await execAsync(command, {
-        maxBuffer: 1024 * 1024 // 1MB buffer
-      })
-
-      const pageCount = parseInt(stdout.trim(), 10)
-      return isNaN(pageCount) ? 1 : pageCount
     } catch (error) {
-      console.error('[PDF] Error getting page count:', error)
+      pdfLogger.error('Error getting page count:', error)
       return 1 // Default to 1 page if we can't determine
     }
   })

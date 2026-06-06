@@ -29,14 +29,14 @@ const handleBlur = (): void => {
 
 const handleSubmit = (): void => {
   const page = parseInt(inputValue.value)
-  
+
   if (!isNaN(page) && page >= 1 && page <= state.value.totalPages && scroll.value) {
     scroll.value.scrollToPage({
       pageNumber: page,
       behavior: 'smooth'
     })
   }
-  
+
   isEditing.value = false
 }
 

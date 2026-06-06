@@ -55,8 +55,8 @@ const filteredFiles = computed(() => {
   // Filter by search query (simple case-insensitive search)
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase().trim()
-    result = result.filter((file) =>
-      file.name.toLowerCase().includes(query) || file.path.toLowerCase().includes(query)
+    result = result.filter(
+      (file) => file.name.toLowerCase().includes(query) || file.path.toLowerCase().includes(query)
     )
   }
 
@@ -115,10 +115,8 @@ const clearFilters = (): void => {
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <Button variant="ghost" size="sm" :disabled="loading" @click="emit('refresh')">
-          ↻
-        </Button>
-        <Button v-if="onClose" variant="ghost" size="sm" @click="emit('close')"> ✕ </Button>
+        <Button variant="ghost" size="sm" :disabled="loading" @click="emit('refresh')"> ↻ </Button>
+        <Button v-if="$attrs.onClose" variant="ghost" size="sm" @click="emit('close')"> ✕ </Button>
       </div>
     </div>
 
@@ -140,6 +138,7 @@ const clearFilters = (): void => {
         <button
           v-for="tag in availableTags"
           :key="tag"
+          :aria-pressed="selectedTags.includes(tag)"
           :class="[
             'px-2 py-1 text-xs rounded-md transition-colors',
             selectedTags.includes(tag)
@@ -155,19 +154,17 @@ const clearFilters = (): void => {
 
     <!-- Search Filter -->
     <div class="px-4 pt-3 pb-2 shrink-0 border-b">
-      <Input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search files..."
-        class="h-8 text-sm"
-      />
+      <Input v-model="searchQuery" type="text" placeholder="Search files..." class="h-8 text-sm" />
       <p v-if="searchQuery || selectedTags.length > 0" class="text-xs text-muted-foreground mt-2">
         Showing {{ filteredFiles.length }} of {{ files.length }} files
       </p>
     </div>
 
     <!-- Select All and Actions -->
-    <div v-if="files.length > 0" class="flex items-center justify-between px-4 py-3 shrink-0 border-b">
+    <div
+      v-if="files.length > 0"
+      class="flex items-center justify-between px-4 py-3 shrink-0 border-b"
+    >
       <div class="flex items-center gap-2">
         <Checkbox
           id="select-all-files"
@@ -231,7 +228,11 @@ const clearFilters = (): void => {
                 : 'bg-red-500/10 border-red-500/30 opacity-60',
             file.path === selectedFilePath ? 'ring-2 ring-primary' : ''
           ]"
-          @click="file.exists && (file.extension === 'pdf' || file.extension === '.pdf') && emit('file-click', file)"
+          @click="
+            file.exists &&
+            (file.extension === 'pdf' || file.extension === '.pdf') &&
+            emit('file-click', file)
+          "
         >
           <div class="flex items-start gap-3">
             <Checkbox
@@ -260,19 +261,14 @@ const clearFilters = (): void => {
                     >({{ file.processingMethod }})</span
                   >
                 </span>
-                <div
-                  v-else-if="!file.exists"
-                  class="flex items-center gap-1 shrink-0"
-                >
-                  <span
-                    class="text-xs px-2 py-0.5 bg-red-500/20 text-red-500 rounded"
-                  >
+                <div v-else-if="!file.exists" class="flex items-center gap-1 shrink-0">
+                  <span class="text-xs px-2 py-0.5 bg-red-500/20 text-red-500 rounded">
                     Missing
                   </span>
                   <button
-                    @click.stop="emit('delete-file', file)"
                     class="p-1 hover:bg-red-500/20 text-red-500 rounded transition-colors"
                     title="Delete missing file"
+                    @click.stop="emit('delete-file', file)"
                   >
                     <Trash2 :size="14" />
                   </button>

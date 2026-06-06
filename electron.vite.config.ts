@@ -2,17 +2,12 @@ import { resolve } from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, externalizeDepsPlugin, bytecodePlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
-// import { copyFileSync, existsSync, mkdirSync } from 'fs'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { readmePlugin } from './vite-plugin-readme'
 
 export default defineConfig({
   main: {
-    plugins: [
-      externalizeDepsPlugin(),
-      bytecodePlugin()
-      // No PDFium WASM copying needed when using Chromium's built-in viewer
-    ]
+    plugins: [externalizeDepsPlugin(), bytecodePlugin()]
   },
   preload: {
     plugins: [externalizeDepsPlugin(), bytecodePlugin()]
@@ -25,6 +20,13 @@ export default defineConfig({
       }
     },
     publicDir: resolve(__dirname, 'public'),
+    build: {
+      rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'src/renderer/index.html')
+        }
+      }
+    },
     plugins: [vue(), tailwindcss(), tsconfigPaths(), readmePlugin()]
   }
 })

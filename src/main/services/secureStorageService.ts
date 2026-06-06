@@ -1,13 +1,8 @@
 import { safeStorage } from 'electron'
-import * as fs from 'fs'
+import { readFile, writeFile, unlink } from 'fs/promises'
 import * as path from 'path'
 import { app } from 'electron'
-import { promisify } from 'util'
-
-const readFile = promisify(fs.readFile)
-const writeFile = promisify(fs.writeFile)
-const unlink = promisify(fs.unlink)
-const access = promisify(fs.access)
+import { settingsLogger as secureStorageLogger } from '../utils/logger'
 
 /**
  * Service for securely storing sensitive data like API keys
@@ -55,7 +50,7 @@ class SecureStorageService {
       // Save to disk
       await writeFile(this.storageFile, JSON.stringify(storage), 'utf-8')
     } catch (error) {
-      console.error('Error storing secure item:', error)
+      secureStorageLogger.error('Error storing secure item:', error)
       throw new Error(`Failed to store secure item: ${(error as Error).message}`)
     }
   }
@@ -81,7 +76,7 @@ class SecureStorageService {
 
       return decrypted
     } catch (error) {
-      console.error('Error retrieving secure item:', error)
+      secureStorageLogger.error('Error retrieving secure item:', error)
       throw new Error(`Failed to retrieve secure item: ${(error as Error).message}`)
     }
   }
@@ -98,7 +93,7 @@ class SecureStorageService {
         await writeFile(this.storageFile, JSON.stringify(storage), 'utf-8')
       }
     } catch (error) {
-      console.error('Error removing secure item:', error)
+      secureStorageLogger.error('Error removing secure item:', error)
       throw new Error(`Failed to remove secure item: ${(error as Error).message}`)
     }
   }
@@ -110,7 +105,7 @@ class SecureStorageService {
     try {
       const storage = await this.loadStorage()
       return key in storage
-    } catch (error) {
+    } catch {
       return false
     }
   }
@@ -134,12 +129,17 @@ class SecureStorageService {
    */
   private async loadStorage(): Promise<Record<string, string>> {
     try {
-      await access(this.storageFile, fs.constants.F_OK)
       const content = await readFile(this.storageFile, 'utf-8')
       return JSON.parse(content)
     } catch (error) {
-      // File doesn't exist, return empty storage
-      return {}
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === 'ENOENT') {
+        // First run — storage file not yet created
+        return {}
+      }
+      // Unexpected error (e.g. permission denied, corrupt JSON) — surface it
+      secureStorageLogger.error('Failed to load secure storage:', error)
+      throw error
     }
   }
 }

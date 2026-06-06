@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import type { Component } from 'vue'
 import type { RouteMetadata } from '@/router'
 
 interface SavedSearch {
@@ -40,8 +41,8 @@ const navigationRoutes = computed(() => {
   return router.options.routes.map((route) => ({
     path: route.path,
     name: route.name as string,
-    icon: (route.meta as unknown as RouteMetadata)?.icon || '',
-    label: (route.meta as unknown as RouteMetadata)?.label || route.name
+    icon: (route.meta as RouteMetadata)?.icon as Component | undefined,
+    label: (route.meta as RouteMetadata)?.label || route.name
   }))
 })
 
@@ -79,9 +80,9 @@ const formatTime = (timestamp: string): string => {
       <!-- Collapse Toggle Button -->
       <div class="flex justify-end px-2 mb-2 shrink-0">
         <button
-          @click="toggleCollapse"
           class="p-2 hover:bg-accent rounded-md transition-colors border border-accent/50 hover:border-accent"
           :title="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          @click="toggleCollapse"
         >
           <svg
             v-if="isCollapsed"
@@ -126,7 +127,7 @@ const formatTime = (timestamp: string): string => {
                     class="flex items-center justify-center px-3 py-2 hover:bg-accent rounded-md cursor-pointer transition-colors"
                     active-class="bg-accent font-medium text-foreground"
                   >
-                    <span v-html="route.icon"></span>
+                    <component :is="route.icon" :size="20" />
                   </router-link>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -140,7 +141,7 @@ const formatTime = (timestamp: string): string => {
               class="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded-md cursor-pointer transition-colors"
               active-class="bg-accent font-medium text-foreground"
             >
-              <span v-html="route.icon"></span>
+              <component :is="route.icon" :size="20" />
               <span>{{ route.label }}</span>
             </router-link>
           </li>
@@ -151,7 +152,7 @@ const formatTime = (timestamp: string): string => {
       <!-- Sidebar History (hidden when collapsed) -->
       <template v-if="!isCollapsed">
         <div class="flex flex-col py-2 px-3 mb-1">
-          <span class="font-medium after:content-['_↗']">History</span>
+          <span class="font-medium">History</span>
         </div>
         <ScrollArea class="flex-1 min-h-0 mb-2">
           <div v-if="savedSearches && savedSearches.length > 0" class="w-full pr-4">

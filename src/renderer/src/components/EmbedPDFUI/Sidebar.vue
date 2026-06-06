@@ -1,70 +1,69 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { ThumbnailsPane, ThumbImg } from '@embedpdf/plugin-thumbnail/vue';
-import { useScroll } from '@embedpdf/plugin-scroll/vue';
-import ScrollArea from '@/components/ui/scroll-area/ScrollArea.vue';
+import { computed, ref } from 'vue'
+import { ThumbnailsPane, ThumbImg } from '@embedpdf/plugin-thumbnail/vue'
+import { useScroll } from '@embedpdf/plugin-scroll/vue'
+import ScrollArea from '@/components/ui/scroll-area/ScrollArea.vue'
 
-const { provides: scroll, state } = useScroll();
-const isUserScrolling = ref(false);
+const { provides: scroll, state } = useScroll()
+const isUserScrolling = ref(false)
 
-const getIsActive = (pageIndex: number) =>
-  computed(() => state.value.currentPage === pageIndex + 1);
+const getIsActive = (pageIndex: number) => computed(() => state.value.currentPage === pageIndex + 1)
 
 const handleClick = (pageIndex: number) => {
-  isUserScrolling.value = true;
+  isUserScrolling.value = true
   scroll.value?.scrollToPage({
     pageNumber: pageIndex + 1, // 1-based
-    behavior: 'smooth',
-  });
+    behavior: 'smooth'
+  })
   // Reset flag after scroll animation completes
   setTimeout(() => {
-    isUserScrolling.value = false;
-  }, 500);
-};
+    isUserScrolling.value = false
+  }, 500)
+}
 </script>
 
 <template>
   <div class="sidebar">
     <ScrollArea class="h-full">
       <ThumbnailsPane :style="{ width: '100%', height: '100%' }" class="thumbs-viewport">
-      <template #default="{ meta }">
-        <!-- absolute-positioned row inside the virtualized pane -->
-        <div
-          class="thumb-row"
-          :class="{ active: getIsActive(meta.pageIndex).value }"
-          :style="{
-            position: 'absolute',
-            top: meta.top + 'px',
-            left: 0,
-            right: 0,
-            height: meta.wrapperHeight + 'px',
-          }"
-          @click="handleClick(meta.pageIndex)"
-        >
+        <template #default="{ meta }">
+          <!-- absolute-positioned row inside the virtualized pane -->
           <div
-            class="thumb-img-wrapper"
+            class="thumb-row"
+            :class="{ active: getIsActive(meta.pageIndex).value }"
             :style="{
-              /* outer box still uses the plugin width (meta.width + padding*2) */
-              padding: (meta.padding || 0) + 'px',
-              boxSizing: 'content-box', // ensures we keep the intended outer width
+              position: 'absolute',
+              top: meta.top + 'px',
+              left: 0,
+              right: 0,
+              height: meta.wrapperHeight + 'px'
             }"
+            @click="handleClick(meta.pageIndex)"
           >
-            <ThumbImg
-              class="thumb-img"
-              :meta="meta"
+            <div
+              class="thumb-img-wrapper"
               :style="{
-                width: meta.width + 'px',
-                height: meta.height + 'px',
-                display: 'block',
+                /* outer box still uses the plugin width (meta.width + padding*2) */
+                padding: (meta.padding || 0) + 'px',
+                boxSizing: 'content-box' // ensures we keep the intended outer width
               }"
-            />
+            >
+              <ThumbImg
+                class="thumb-img"
+                :meta="meta"
+                :style="{
+                  width: meta.width + 'px',
+                  height: meta.height + 'px',
+                  display: 'block'
+                }"
+              />
+            </div>
+            <div class="thumb-label" :style="{ height: meta.labelHeight + 'px' }">
+              Page {{ meta.pageIndex + 1 }}
+            </div>
           </div>
-          <div class="thumb-label" :style="{ height: meta.labelHeight + 'px' }">
-            Page {{ meta.pageIndex + 1 }}
-          </div>
-        </div>
-      </template>
-    </ThumbnailsPane>
+        </template>
+      </ThumbnailsPane>
     </ScrollArea>
   </div>
 </template>

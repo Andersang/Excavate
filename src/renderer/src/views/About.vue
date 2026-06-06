@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import readmeContent from 'virtual:readme'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
@@ -8,9 +9,9 @@ import { uiLogger } from '@/utils/logger'
 
 const version = ref('')
 const readme = ref('')
-const contentRef = ref<HTMLElement | null>(null)
-const updateInfo = ref<{ hasUpdate: boolean; latestVersion?: string; downloadUrl?: string } | null>(
-  null
+const contentRef = ref<HTMLElement | undefined>(undefined)
+const updateInfo = ref<{ hasUpdate: boolean; latestVersion?: string; downloadUrl?: string } | undefined>(
+  undefined
 )
 const checkingUpdate = ref(false)
 
@@ -32,8 +33,8 @@ onMounted(async () => {
   // Get version from app via IPC
   version.value = await window.api.getAppVersion()
 
-  // Parse markdown content to HTML
-  readme.value = await marked.parse(readmeContent)
+  // Parse markdown content to HTML, then sanitize before binding to v-html
+  readme.value = DOMPurify.sanitize(await marked.parse(readmeContent))
 
   // Set up link click handlers after DOM updates
   await nextTick()

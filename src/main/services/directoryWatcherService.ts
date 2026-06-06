@@ -1,6 +1,7 @@
-import * as fs from 'fs'
+import { access } from 'fs/promises'
 import * as path from 'path'
 import chokidar, { type FSWatcher } from 'chokidar'
+import { BrowserWindow } from 'electron'
 import { settingsService } from './settingsService'
 import { watcherLogger } from '../utils/logger'
 
@@ -10,6 +11,7 @@ import { watcherLogger } from '../utils/logger'
 class DirectoryWatcherService {
   private watchers: Map<string, FSWatcher> = new Map()
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map()
+  private retryCount: Map<string, number> = new Map()
   private onIndexCallback?: (
     directoryId: string,
     directoryPath: string,
@@ -21,21 +23,28 @@ class DirectoryWatcherService {
    */
   setIndexCallback(
     callback: (directoryId: string, directoryPath: string, fileTypes: string[]) => Promise<void>
-  ) {
+  ): void {
     this.onIndexCallback = callback
   }
 
   /**
-   * Start watching a directory for changes
+   * Start watching a directory for changes.
+   * Returns a promise that resolves once the watch is started (or skipped).
    */
-  watchDirectory(directoryId: string, directoryPath: string, fileTypes: string[]) {
+  async watchDirectory(
+    directoryId: string,
+    directoryPath: string,
+    fileTypes: string[]
+  ): Promise<void> {
     // Don't watch if already watching
     if (this.watchers.has(directoryId)) {
       return
     }
 
-    // Check if directory exists
-    if (!fs.existsSync(directoryPath)) {
+    // Check if directory exists (async — must not block the event loop)
+    try {
+      await access(directoryPath)
+    } catch {
       watcherLogger.warn(`Cannot watch missing directory: ${directoryPath}`)
       return
     }
@@ -82,6 +91,16 @@ class DirectoryWatcherService {
       // Handle errors
       watcher.on('error', (error) => {
         watcherLogger.error(`Error watching ${directoryPath}:`, error)
+        // Notify renderer of watcher errors
+        BrowserWindow.getAllWindows().forEach((window) => {
+          window.webContents.send('directory:watch-error', {
+            directoryId,
+            directoryPath,
+            error: error instanceof Error ? error.message : String(error)
+          })
+        })
+        // Attempt to recover with exponential backoff
+        this.scheduleRetry(directoryId, directoryPath, fileTypes)
       })
 
       // Handle ready event
@@ -101,7 +120,7 @@ class DirectoryWatcherService {
   /**
    * Stop watching a directory
    */
-  async unwatchDirectory(directoryId: string) {
+  async unwatchDirectory(directoryId: string): Promise<void> {
     const watcher = this.watchers.get(directoryId)
     if (watcher) {
       await watcher.close()
@@ -115,6 +134,41 @@ class DirectoryWatcherService {
       clearTimeout(timer)
       this.debounceTimers.delete(directoryId)
     }
+    
+    // Clear retry count
+    this.retryCount.delete(directoryId)
+  }
+
+  /**
+   * Schedule a retry for a failed watcher with exponential backoff
+   */
+  private scheduleRetry(
+    directoryId: string,
+    directoryPath: string,
+    fileTypes: string[]
+  ): void {
+    const currentRetries = this.retryCount.get(directoryId) ?? 0
+    const MAX_RETRIES = 3
+    
+    if (currentRetries >= MAX_RETRIES) {
+      watcherLogger.error(
+        `Max retries (${MAX_RETRIES}) reached for ${directoryPath}. Giving up.`
+      )
+      return
+    }
+    
+    // Exponential backoff: 5s, 10s, 20s
+    const delay = 5000 * Math.pow(2, currentRetries)
+    this.retryCount.set(directoryId, currentRetries + 1)
+    
+    watcherLogger.info(
+      `Scheduling retry ${currentRetries + 1}/${MAX_RETRIES} for ${directoryPath} in ${delay}ms`
+    )
+    
+    setTimeout(async () => {
+      await this.unwatchDirectory(directoryId)
+      await this.watchDirectory(directoryId, directoryPath, fileTypes)
+    }, delay)
   }
 
   /**
@@ -126,7 +180,7 @@ class DirectoryWatcherService {
     fileTypes: string[],
     eventType: string,
     filename: string
-  ) {
+  ): void {
     watcherLogger.debug(`Change detected in ${directoryId}: ${eventType} - ${filename}`)
 
     // Clear existing timer
@@ -154,7 +208,7 @@ class DirectoryWatcherService {
   /**
    * Initialize watchers for all directories with watchForChanges enabled
    */
-  async initializeWatchers() {
+  async initializeWatchers(): Promise<void> {
     const directories = settingsService.getDirectories()
     watcherLogger.info(
       `Initializing watchers for ${Object.keys(directories).length} directories...`
@@ -176,7 +230,7 @@ class DirectoryWatcherService {
   /**
    * Stop all watchers
    */
-  async stopAllWatchers() {
+  async stopAllWatchers(): Promise<void> {
     const ids = Array.from(this.watchers.keys())
     await Promise.all(ids.map((id) => this.unwatchDirectory(id)))
     watcherLogger.info('Stopped all directory watchers')

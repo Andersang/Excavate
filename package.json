@@ -1,6 +1,6 @@
 {
   "name": "panopticon",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Panopticon is a desktop application for managing and searching through PDF documents with advanced text extraction and bookmarking capabilities.",
   "main": "./out/main/index.js",
   "author": "andersang.com",
@@ -27,20 +27,14 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@embedpdf/core": "^1.4.1",
     "@embedpdf/engines": "^1.4.1",
-    "@embedpdf/plugin-annotation": "^1.4.1",
-    "@embedpdf/plugin-export": "^1.4.1",
-    "@embedpdf/plugin-fullscreen": "^1.4.1",
+    "@embedpdf/models": "^2.14.3",
     "@embedpdf/plugin-interaction-manager": "^1.4.1",
     "@embedpdf/plugin-loader": "^1.4.1",
     "@embedpdf/plugin-pan": "^1.4.1",
-    "@embedpdf/plugin-print": "^1.4.1",
-    "@embedpdf/plugin-redaction": "^1.4.1",
     "@embedpdf/plugin-render": "^1.4.1",
-    "@embedpdf/plugin-rotate": "^1.4.1",
     "@embedpdf/plugin-scroll": "^1.4.1",
     "@embedpdf/plugin-search": "^1.4.1",
     "@embedpdf/plugin-selection": "^1.4.1",
-    "@embedpdf/plugin-spread": "^1.4.1",
     "@embedpdf/plugin-thumbnail": "^1.4.1",
     "@embedpdf/plugin-tiling": "^1.4.1",
     "@embedpdf/plugin-viewport": "^1.4.1",
@@ -50,18 +44,22 @@
     "@fontsource/instrument-serif": "^5.2.8",
     "@tailwindcss/vite": "^4.1.16",
     "@vueuse/core": "^14.0.0",
+    "canvas": "^3.2.1",
     "chokidar": "^4.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.7",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.3.9",
     "flexsearch": "^0.8.212",
     "lucide-vue-next": "^0.548.0",
     "marked": "^16.4.1",
+    "pdf-parse": "^2.4.5",
     "reka-ui": "^2.6.0",
     "semver": "^7.7.3",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.16",
+    "tesseract.js": "^7.0.0",
     "tw-animate-css": "^1.4.0",
     "vue-router": "^4.6.3"
   },
@@ -69,9 +67,9 @@
     "@electron-toolkit/eslint-config-prettier": "3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
-    "@types/chokidar": "^2.1.7",
     "@types/flexsearch": "^0.7.42",
     "@types/node": "^22.18.12",
+    "@types/pdf-parse": "^1.1.5",
     "@vitejs/plugin-vue": "^6.0.1",
     "electron": "^38.1.2",
     "electron-builder": "^25.1.8",
@@ -91,6 +89,9 @@
     "onlyBuiltDependencies": [
       "electron",
       "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "canvas"
     ]
   }
 }

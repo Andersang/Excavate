@@ -1,58 +1,12 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-
-interface SystemDependency {
-  name: string
-  version?: string
-  isInstalled: boolean
-  isValidVersion?: boolean
-  requiredVersion?: string
-  architecture?: string
-  error?: string
-}
-
-interface DirectorySettings {
-  watchForChanges: boolean
-  excludePatterns: string[]
-  fileTypes: string[]
-}
-
-interface Directory {
-  path: string
-  name: string
-  addedAt: string
-  exists: boolean
-  settings: DirectorySettings
-  lastAccessed: string
-}
-
-interface AppSettings {
-  initTime?: string
-  systemType?: string
-  offlineMode?: boolean
-  collections?: Record<string, any>
-  directories: Record<string, Directory>
-}
-
-interface DirectoryConfig {
-  createdAt: string
-  updatedAt: string
-  fileTypes: string[]
-  fileCount: number
-  fileIndex: FileInfo[]
-  customExclusionPatterns: string[]
-  allTags?: string[]
-}
-
-interface FileInfo {
-  id: string
-  name: string
-  path: string
-  size: number
-  mtime: string
-  extension: string
-  exists: boolean
-  tags?: string[]
-}
+import type {
+  Directory,
+  DirectorySettings,
+  DirectoryConfig,
+  AppSettings,
+  FileInfo,
+  Bookmark
+} from '../shared/types'
 
 declare global {
   interface Window {
@@ -60,12 +14,6 @@ declare global {
     api: {
       // App info APIs
       getAppVersion: () => Promise<string>
-
-      // System status APIs
-      getPythonStatus: () => Promise<SystemDependency>
-      getTesseractStatus: () => Promise<SystemDependency>
-      getGhostscriptStatus: () => Promise<SystemDependency>
-      getPyPDF2Status: () => Promise<SystemDependency>
 
       // Dialog APIs
       dialog: {
@@ -108,6 +56,9 @@ declare global {
         stopWatch: (directoryId: string) => Promise<{ success: boolean; error?: string }>
         initWatchers: () => Promise<{ success: boolean; error?: string }>
         onDirectoryUpdated: (
+          callback: (data: { directoryId: string; fileCount: number }) => void
+        ) => void
+        offDirectoryUpdated: (
           callback: (data: { directoryId: string; fileCount: number }) => void
         ) => void
         deleteFiles: (
@@ -157,39 +108,6 @@ declare global {
         removeItem: (key: string) => Promise<void>
         hasItem: (key: string) => Promise<boolean>
         clear: () => Promise<void>
-      }
-
-      // Python Environment APIs
-      python: {
-        checkVenvStatus: () => Promise<{
-          exists: boolean
-          hasOcrmypdf: boolean
-          ocrmypdfVersion?: string
-          error?: string
-        }>
-        createVenv: () => Promise<{
-          success: boolean
-          stdout?: string
-          stderr?: string
-          error?: string
-        }>
-        installOcrmypdf: () => Promise<{
-          success: boolean
-          stdout?: string
-          stderr?: string
-          error?: string
-        }>
-        setupEnvironment: () => Promise<{
-          success: boolean
-          stdout?: string
-          stderr?: string
-          error?: string
-        }>
-        getVenvPath: () => Promise<string>
-        getPythonExecutable: () => Promise<string>
-        getOcrmypdfExecutable: () => Promise<string>
-        onSetupProgress: (callback: (message: string) => void) => void
-        removeSetupProgressListener: () => void
       }
 
       // Document Processing APIs
@@ -260,7 +178,9 @@ declare global {
         createTemp: (originalPath: string) => Promise<string>
         removeTemp: (tempPath: string) => Promise<void>
         cleanupAll: () => Promise<void>
-        getActiveTemps: () => Promise<Array<{ tempPath: string; originalPath: string; createdAt: number }>>
+        getActiveTemps: () => Promise<
+          Array<{ tempPath: string; originalPath: string; createdAt: number }>
+        >
         getPageCount: (pdfPath: string) => Promise<number>
       }
 
@@ -333,23 +253,10 @@ interface SearchHistoryEntry {
   resultCount?: number
 }
 
-interface Bookmark {
-  id: string
-  fileId: string
-  filePath: string
-  fileName: string
-  page: number
-  name: string
-  tags: string[]
-  notes?: string
-  createdAt: string
-  updatedAt?: string
-}
-
 interface UpdateCheckResult {
   hasUpdate: boolean
   currentVersion: string
-  latestVersion: string
+  latestVersion?: string
   downloadUrl?: string
   releaseNotes?: string
 }

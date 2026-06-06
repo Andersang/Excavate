@@ -102,37 +102,35 @@ const isNextDisabled = computed(() => state.value.currentPage === state.value.to
 
 <template>
   <div
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
     class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[1000] transition-opacity duration-200"
     :class="isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <div
       class="flex items-center gap-2 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg"
     >
       <!-- Previous page button -->
       <button
-        @click="handlePreviousPage"
         :disabled="isPreviousDisabled"
         class="p-1.5 rounded transition-colors"
         :class="
-          isPreviousDisabled
-            ? 'text-zinc-600 cursor-not-allowed'
-            : 'text-white hover:bg-zinc-700'
+          isPreviousDisabled ? 'text-zinc-600 cursor-not-allowed' : 'text-white hover:bg-zinc-700'
         "
         title="Previous page"
+        @click="handlePreviousPage"
       >
         <ChevronLeft :size="18" />
       </button>
 
       <!-- Page input form -->
-      <form @submit.prevent="handlePageSubmit" class="flex items-center gap-2">
+      <form class="flex items-center gap-2" @submit.prevent="handlePageSubmit">
         <input
           v-model="inputValue"
-          @input="handleInputChange"
           type="text"
           inputmode="numeric"
           class="w-12 px-2 py-1 text-center bg-zinc-900 text-white border border-zinc-600 rounded text-sm focus:outline-none focus:border-blue-500"
+          @input="handleInputChange"
         />
         <span class="text-zinc-400 text-sm">/</span>
         <span class="text-zinc-300 text-sm min-w-[2ch]">{{ state.totalPages }}</span>
@@ -140,15 +138,13 @@ const isNextDisabled = computed(() => state.value.currentPage === state.value.to
 
       <!-- Next page button -->
       <button
-        @click="handleNextPage"
         :disabled="isNextDisabled"
         class="p-1.5 rounded transition-colors"
         :class="
-          isNextDisabled
-            ? 'text-zinc-600 cursor-not-allowed'
-            : 'text-white hover:bg-zinc-700'
+          isNextDisabled ? 'text-zinc-600 cursor-not-allowed' : 'text-white hover:bg-zinc-700'
         "
         title="Next page"
+        @click="handleNextPage"
       >
         <ChevronRight :size="18" />
       </button>

@@ -1,13 +1,7 @@
-import * as fs from 'fs'
+import { readFile, writeFile, unlink, readdir, mkdir } from 'fs/promises'
 import * as path from 'path'
-import { promisify } from 'util'
 import { app } from 'electron'
-
-const readFile = promisify(fs.readFile)
-const writeFile = promisify(fs.writeFile)
-const unlink = promisify(fs.unlink)
-const readdir = promisify(fs.readdir)
-const mkdir = promisify(fs.mkdir)
+import { pdfLogger } from '../utils/logger'
 
 interface TempPdfInfo {
   tempPath: string
@@ -34,7 +28,7 @@ class PdfTempService {
       // Clean up any existing temp files from previous sessions
       await this.cleanupAllTempFiles()
     } catch (error) {
-      console.error('Error initializing PDF temp service:', error)
+      pdfLogger.error('Error initializing PDF temp service:', error)
     }
   }
 
@@ -79,10 +73,10 @@ class PdfTempService {
       // Clean up old files if we exceed the limit
       await this.cleanupOldTempFiles()
 
-      console.log(`[PdfTempService] Created temp PDF: ${tempPath}`)
+      pdfLogger.info(`[PdfTempService] Created temp PDF: ${tempPath}`)
       return tempPath
     } catch (error) {
-      console.error('[PdfTempService] Error creating temp PDF:', error)
+      pdfLogger.error('[PdfTempService] Error creating temp PDF:', error)
       throw new Error(
         `Failed to create temporary PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -110,15 +104,15 @@ class PdfTempService {
         try {
           await unlink(tempPath)
           this.activeTempFiles.delete(tempPath)
-          console.log(`[PdfTempService] Cleaned up old temp PDF: ${tempPath}`)
+          pdfLogger.info(`[PdfTempService] Cleaned up old temp PDF: ${tempPath}`)
         } catch (error) {
-          console.warn(`[PdfTempService] Failed to delete temp file ${tempPath}:`, error)
+          pdfLogger.warn(`[PdfTempService] Failed to delete temp file ${tempPath}:`, error)
           // Remove from tracking even if delete failed
           this.activeTempFiles.delete(tempPath)
         }
       }
     } catch (error) {
-      console.error('[PdfTempService] Error cleaning up old temp files:', error)
+      pdfLogger.error('[PdfTempService] Error cleaning up old temp files:', error)
     }
   }
 
@@ -134,9 +128,9 @@ class PdfTempService {
           const filePath = path.join(this.tempDir, file)
           try {
             await unlink(filePath)
-            console.log(`[PdfTempService] Cleaned up temp PDF: ${filePath}`)
+            pdfLogger.info(`[PdfTempService] Cleaned up temp PDF: ${filePath}`)
           } catch (error) {
-            console.warn(`[PdfTempService] Failed to delete temp file ${filePath}:`, error)
+            pdfLogger.warn(`[PdfTempService] Failed to delete temp file ${filePath}:`, error)
           }
         }
       }
@@ -146,7 +140,7 @@ class PdfTempService {
     } catch (error) {
       // Directory might not exist yet, that's okay
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        console.error('[PdfTempService] Error cleaning up all temp files:', error)
+        pdfLogger.error('[PdfTempService] Error cleaning up all temp files:', error)
       }
     }
   }
@@ -158,9 +152,9 @@ class PdfTempService {
     try {
       await unlink(tempPath)
       this.activeTempFiles.delete(tempPath)
-      console.log(`[PdfTempService] Removed temp PDF: ${tempPath}`)
+      pdfLogger.info(`[PdfTempService] Removed temp PDF: ${tempPath}`)
     } catch (error) {
-      console.warn(`[PdfTempService] Failed to remove temp PDF ${tempPath}:`, error)
+      pdfLogger.warn(`[PdfTempService] Failed to remove temp PDF ${tempPath}:`, error)
       // Remove from tracking even if delete failed
       this.activeTempFiles.delete(tempPath)
     }

@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import { bookmarkService, Bookmark } from '../services/bookmarkService'
+import { bookmarkLogger } from '../utils/logger'
+import { isPathAllowed } from '../utils/pathValidation'
 
 /**
  * Register all bookmark-related IPC handlers
@@ -13,6 +15,9 @@ export function registerBookmarkHandlers(): void {
       directoryPath: string,
       bookmark: Omit<Bookmark, 'id' | 'createdAt'>
     ): Promise<{ success: boolean; bookmark?: Bookmark; error?: string }> => {
+      if (!isPathAllowed(directoryPath)) {
+        return { success: false, error: 'Access denied: path outside allowed directories' }
+      }
       return await bookmarkService.addBookmark(directoryPath, bookmark)
     }
   )
@@ -25,6 +30,9 @@ export function registerBookmarkHandlers(): void {
       directoryPath: string,
       bookmarkId: string
     ): Promise<{ success: boolean; error?: string }> => {
+      if (!isPathAllowed(directoryPath)) {
+        return { success: false, error: 'Access denied: path outside allowed directories' }
+      }
       return await bookmarkService.removeBookmark(directoryPath, bookmarkId)
     }
   )
@@ -38,6 +46,9 @@ export function registerBookmarkHandlers(): void {
       bookmarkId: string,
       updates: Partial<Omit<Bookmark, 'id' | 'createdAt'>>
     ): Promise<{ success: boolean; bookmark?: Bookmark; error?: string }> => {
+      if (!isPathAllowed(directoryPath)) {
+        return { success: false, error: 'Access denied: path outside allowed directories' }
+      }
       return await bookmarkService.updateBookmark(directoryPath, bookmarkId, updates)
     }
   )
@@ -49,6 +60,9 @@ export function registerBookmarkHandlers(): void {
       _event,
       directoryPath: string
     ): Promise<{ success: boolean; bookmarks?: Bookmark[]; error?: string }> => {
+      if (!isPathAllowed(directoryPath)) {
+        return { success: false, error: 'Access denied: path outside allowed directories' }
+      }
       return await bookmarkService.getBookmarks(directoryPath)
     }
   )
@@ -61,9 +75,12 @@ export function registerBookmarkHandlers(): void {
       directoryPath: string,
       fileId: string
     ): Promise<{ success: boolean; bookmarks?: Bookmark[]; error?: string }> => {
+      if (!isPathAllowed(directoryPath)) {
+        return { success: false, error: 'Access denied: path outside allowed directories' }
+      }
       return await bookmarkService.getFileBookmarks(directoryPath, fileId)
     }
   )
 
-  console.log('[IPC] Bookmark handlers registered')
+  bookmarkLogger.info('[IPC] Bookmark handlers registered')
 }

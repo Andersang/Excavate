@@ -3,8 +3,10 @@
 import TitleBar from '@/components/TitleBar.vue'
 import SideBar from '@/components/SideBar.vue'
 import InitPage from '@/views/InitPage.vue'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { uiLogger } from '@/utils/logger'
+import { emitExecuteSavedSearch } from '@/utils/appEvents'
 
 const router = useRouter()
 const settingsExists = ref(false)
@@ -21,16 +23,16 @@ const loadSearchData = async (): Promise<void> => {
     savedSearches.value = saved
     searchHistory.value = history
   } catch (error) {
-    console.error('Failed to load search data:', error)
+    uiLogger.error('Failed to load search data:', error)
   }
 }
 
 const handleExecuteSearch = async (searchText: string): Promise<void> => {
   // Navigate to search page first
   await router.push('/')
-  
+
   // Then emit event that Base.vue can listen to
-  window.dispatchEvent(new CustomEvent('execute-saved-search', { detail: searchText }))
+  emitExecuteSavedSearch(searchText)
 }
 
 const handleDeleteSaved = async (id: string): Promise<void> => {
@@ -38,8 +40,13 @@ const handleDeleteSaved = async (id: string): Promise<void> => {
     await window.api.search.deleteSaved(id)
     await loadSearchData()
   } catch (error) {
-    console.error('Failed to delete saved search:', error)
+    uiLogger.error('Failed to delete saved search:', error)
   }
+}
+
+const handleSettingsCreated = async (): Promise<void> => {
+  settingsExists.value = true
+  await loadSearchData()
 }
 
 onMounted(async () => {
@@ -50,6 +57,12 @@ onMounted(async () => {
 
   // Listen for refresh events from child components
   window.addEventListener('refresh-saved-searches', loadSearchData)
+  window.addEventListener('settings-created', handleSettingsCreated)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('refresh-saved-searches', loadSearchData)
+  window.removeEventListener('settings-created', handleSettingsCreated)
 })
 </script>
 

@@ -48,6 +48,9 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# Auto-generated electron-vite config artifacts
+electron.vite.config.*.mjs
+
 # Optional npm cache directory
 .npm
 

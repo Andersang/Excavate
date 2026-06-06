@@ -21,8 +21,9 @@ export const ocrLogger = log.scope('ocr')
 export const watcherLogger = log.scope('watcher')
 export const bookmarkLogger = log.scope('bookmark')
 export const settingsLogger = log.scope('settings')
-export const pythonLogger = log.scope('python')
 export const indexLogger = log.scope('indexer')
+export const searchLogger = log.scope('search')
+export const secureStorageLogger = log.scope('secure-storage')
 
 // Export default
 export default logger

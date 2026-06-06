@@ -1,4 +1,6 @@
 import { app } from 'electron'
+import * as path from 'path'
+import { readFile, writeFile } from 'fs/promises'
 import { compare } from 'semver'
 import { logger } from '../utils/logger'
 
@@ -14,19 +16,23 @@ interface UpdateCheckResult {
 class UpdateCheckService {
   private readonly GITHUB_REPO = 'Andersang/Panopticon-Release' // Update with your GitHub username/repo
   private readonly CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 hours
-  private lastCheck = 0
+  private _lastCheck = 0
+  private readonly _statePath = path.join(app.getPath('userData'), 'update-check.json')
 
   /**
    * Check for updates if enough time has passed since last check
    */
   async checkForUpdatesIfNeeded(): Promise<UpdateCheckResult | null> {
+    await this._loadLastCheck()
+
     const now = Date.now()
-    if (now - this.lastCheck < this.CHECK_INTERVAL) {
+    if (now - this._lastCheck < this.CHECK_INTERVAL) {
       logger.debug('Skipping update check - checked recently')
       return null
     }
 
-    this.lastCheck = now
+    this._lastCheck = now
+    await this._saveLastCheck()
     return this.checkForUpdates()
   }
 
@@ -86,8 +92,31 @@ class UpdateCheckService {
   /**
    * Reset the last check time (useful for testing or manual refresh)
    */
-  resetLastCheck(): void {
-    this.lastCheck = 0
+  async resetLastCheck(): Promise<void> {
+    this._lastCheck = 0
+    await this._saveLastCheck()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  private async _loadLastCheck(): Promise<void> {
+    try {
+      const raw = await readFile(this._statePath, 'utf-8')
+      const data = JSON.parse(raw) as { lastCheck?: number }
+      this._lastCheck = data.lastCheck ?? 0
+    } catch {
+      this._lastCheck = 0
+    }
+  }
+
+  private async _saveLastCheck(): Promise<void> {
+    try {
+      await writeFile(this._statePath, JSON.stringify({ lastCheck: this._lastCheck }), 'utf-8')
+    } catch (error) {
+      logger.warn('Failed to persist update-check timestamp:', error)
+    }
   }
 }
 

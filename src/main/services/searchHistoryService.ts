@@ -1,13 +1,10 @@
-import * as fs from 'fs'
+import { mkdir, readFile, writeFile, access, constants } from 'fs/promises'
 import * as path from 'path'
 import { app } from 'electron'
-import { promisify } from 'util'
 import { randomUUID } from 'crypto'
+import { searchLogger } from '../utils/logger'
 
-const mkdir = promisify(fs.mkdir)
-const readFile = promisify(fs.readFile)
-const writeFile = promisify(fs.writeFile)
-const access = promisify(fs.access)
+const MAX_HISTORY_ENTRIES = 50
 
 export interface SavedSearch {
   id: string
@@ -37,8 +34,8 @@ class SearchHistoryService {
   private historyPath: string
 
   // In-memory caches
-  private savedSearchesCache: SavedSearch[] | null = null
-  private historyCache: SearchHistory | null = null
+  private savedSearchesCache: SavedSearch[] = []
+  private historyCache: SearchHistory = { searches: [] }
   private isInitialized = false
 
   constructor() {
@@ -55,10 +52,10 @@ class SearchHistoryService {
     if (this.isInitialized) return
 
     try {
-      await access(this.searchesDir, fs.constants.F_OK)
+      await access(this.searchesDir, constants.F_OK)
     } catch {
       await mkdir(this.searchesDir, { recursive: true })
-      console.log('Created searches directory:', this.searchesDir)
+      searchLogger.info('Created searches directory:', this.searchesDir)
     }
 
     // Load caches on first use
@@ -76,10 +73,10 @@ class SearchHistoryService {
     await this.ensureInitialized()
 
     // Check if search with this name already exists
-    const existingIndex = this.savedSearchesCache!.findIndex((s) => s.name === name)
+    const existingIndex = this.savedSearchesCache.findIndex((s) => s.name === name)
     if (existingIndex !== -1) {
       // Return existing search instead of creating duplicate
-      return this.savedSearchesCache![existingIndex]
+      return this.savedSearchesCache[existingIndex]
     }
 
     const newSearch: SavedSearch = {
@@ -90,10 +87,10 @@ class SearchHistoryService {
       createdAt: new Date().toISOString()
     }
 
-    this.savedSearchesCache!.push(newSearch)
-    await this.writeSavedSearches(this.savedSearchesCache!)
+    this.savedSearchesCache.push(newSearch)
+    await this.writeSavedSearches(this.savedSearchesCache)
 
-    console.log('Saved search:', name)
+    searchLogger.debug('Saved search:', name)
     return newSearch
   }
 
@@ -102,7 +99,7 @@ class SearchHistoryService {
    */
   async getSavedSearches(): Promise<SavedSearch[]> {
     await this.ensureInitialized()
-    return [...this.savedSearchesCache!] // Return copy to prevent external mutation
+    return [...this.savedSearchesCache] // Return copy to prevent external mutation
   }
 
   /**
@@ -111,15 +108,15 @@ class SearchHistoryService {
   async deleteSavedSearch(id: string): Promise<boolean> {
     await this.ensureInitialized()
 
-    const initialLength = this.savedSearchesCache!.length
-    this.savedSearchesCache = this.savedSearchesCache!.filter((s) => s.id !== id)
+    const initialLength = this.savedSearchesCache.length
+    this.savedSearchesCache = this.savedSearchesCache.filter((s) => s.id !== id)
 
     if (this.savedSearchesCache.length === initialLength) {
       return false // Not found
     }
 
     await this.writeSavedSearches(this.savedSearchesCache)
-    console.log('Deleted saved search:', id)
+    searchLogger.debug('Deleted saved search:', id)
     return true
   }
 
@@ -129,15 +126,15 @@ class SearchHistoryService {
   async updateSavedSearch(id: string, name: string): Promise<boolean> {
     await this.ensureInitialized()
 
-    const search = this.savedSearchesCache!.find((s) => s.id === id)
+    const search = this.savedSearchesCache.find((s) => s.id === id)
 
     if (!search) {
       return false
     }
 
     search.name = name
-    await this.writeSavedSearches(this.savedSearchesCache!)
-    console.log('Updated saved search:', id)
+    await this.writeSavedSearches(this.savedSearchesCache)
+    searchLogger.debug('Updated saved search:', id)
     return true
   }
 
@@ -147,11 +144,11 @@ class SearchHistoryService {
   async updateLastUsed(id: string): Promise<void> {
     await this.ensureInitialized()
 
-    const search = this.savedSearchesCache!.find((s) => s.id === id)
+    const search = this.savedSearchesCache.find((s) => s.id === id)
 
     if (search) {
       search.lastUsed = new Date().toISOString()
-      await this.writeSavedSearches(this.savedSearchesCache!)
+      await this.writeSavedSearches(this.savedSearchesCache)
     }
   }
 
@@ -160,9 +157,29 @@ class SearchHistoryService {
    */
   private async readSavedSearchesFromDisk(): Promise<SavedSearch[]> {
     try {
-      await access(this.savedSearchesPath, fs.constants.F_OK)
+      await access(this.savedSearchesPath, constants.F_OK)
       const content = await readFile(this.savedSearchesPath, 'utf-8')
-      return JSON.parse(content) as SavedSearch[]
+      const parsed = JSON.parse(content)
+      
+      // Validate structure
+      if (!Array.isArray(parsed)) {
+        searchLogger.warn('Invalid saved searches format: expected array')
+        return []
+      }
+      
+      // Validate each entry has required fields
+      return parsed.filter((entry): entry is SavedSearch => {
+        return (
+          typeof entry === 'object' &&
+          entry !== null &&
+          typeof entry.id === 'string' &&
+          typeof entry.name === 'string' &&
+          typeof entry.searchText === 'string' &&
+          typeof entry.query === 'string' &&
+          Array.isArray(entry.tags) &&
+          typeof entry.createdAt === 'string'
+        )
+      })
     } catch {
       return []
     }
@@ -189,13 +206,13 @@ class SearchHistoryService {
     await this.ensureInitialized()
 
     // Check if this exact search already exists in history
-    const existingIndex = this.historyCache!.searches.findIndex(
+    const existingIndex = this.historyCache.searches.findIndex(
       (entry) => entry.searchText === searchText
     )
 
     // If it exists, remove it so we can add it at the top
     if (existingIndex !== -1) {
-      this.historyCache!.searches.splice(existingIndex, 1)
+      this.historyCache.searches.splice(existingIndex, 1)
     }
 
     const newEntry: SearchHistoryEntry = {
@@ -208,15 +225,15 @@ class SearchHistoryService {
     }
 
     // Add to beginning of array
-    this.historyCache!.searches.unshift(newEntry)
+    this.historyCache.searches.unshift(newEntry)
 
-    // Keep only last 50
-    if (this.historyCache!.searches.length > 50) {
-      this.historyCache!.searches = this.historyCache!.searches.slice(0, 50)
+    // Keep only last MAX_HISTORY_ENTRIES
+    if (this.historyCache.searches.length > MAX_HISTORY_ENTRIES) {
+      this.historyCache.searches = this.historyCache.searches.slice(0, MAX_HISTORY_ENTRIES)
     }
 
-    await this.writeHistory(this.historyCache!)
-    console.log('Added to search history:', query)
+    await this.writeHistory(this.historyCache)
+    searchLogger.debug('Added to search history:', query)
   }
 
   /**
@@ -224,7 +241,7 @@ class SearchHistoryService {
    */
   async getHistory(): Promise<SearchHistoryEntry[]> {
     await this.ensureInitialized()
-    return [...this.historyCache!.searches] // Return copy to prevent external mutation
+    return [...this.historyCache.searches] // Return copy to prevent external mutation
   }
 
   /**
@@ -236,7 +253,7 @@ class SearchHistoryService {
     this.historyCache = { searches: [] }
     await this.writeHistory(this.historyCache)
 
-    console.log('Cleared search history')
+    searchLogger.info('Cleared search history')
     return true
   }
 
@@ -245,7 +262,7 @@ class SearchHistoryService {
    */
   private async readHistoryFromDisk(): Promise<SearchHistory> {
     try {
-      await access(this.historyPath, fs.constants.F_OK)
+      await access(this.historyPath, constants.F_OK)
       const content = await readFile(this.historyPath, 'utf-8')
       return JSON.parse(content) as SearchHistory
     } catch {

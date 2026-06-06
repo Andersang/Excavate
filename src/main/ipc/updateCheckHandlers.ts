@@ -16,8 +16,8 @@ export function registerUpdateCheckHandlers(): void {
   })
 
   // Reset last check time
-  ipcMain.handle('update:reset-check', () => {
-    updateCheckService.resetLastCheck()
+  ipcMain.handle('update:reset-check', async () => {
+    await updateCheckService.resetLastCheck()
     return true
   })
 }

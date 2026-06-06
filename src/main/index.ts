@@ -2,33 +2,35 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { systemCheckService } from './services/systemCheckService'
 import { settingsService } from './services/settingsService'
 import { directoryWatcherService } from './services/directoryWatcherService'
 import { pdfTempService } from './services/pdfTempService'
+import { tesseractOcrService } from './services/tesseract-ocr-service'
 import { registerIpcHandlers } from './ipc/handlers'
+import { logger } from './utils/logger'
 
 // Initialization function - runs on app startup
 async function initApp(): Promise<void> {
   // Initialize PDF temp service
   await pdfTempService.initialize()
-  console.log('PDF temp service initialized')
+  logger.info('PDF temp service initialized')
 
   // Initialize settings service
   await settingsService.init()
-  console.log(
+  logger.info(
     'Settings initialized. Settings file exists:',
     settingsService.getSettingsFileExists()
   )
 
-  // Check system dependencies
-  const systemStatus = await systemCheckService.checkAllDependencies()
-  console.log('System check:', systemStatus)
+  // Register IPC handlers BEFORE initializing watchers so the watcher
+  // callback channel (directory:updated) is available from the start.
+  registerIpcHandlers()
+  logger.info('IPC handlers registered')
 
   // Initialize directory watchers for auto-indexing
   await directoryWatcherService.initializeWatchers()
 
-  console.log('App initialization complete')
+  logger.info('App initialization complete')
 }
 
 function createWindow(): void {
@@ -54,8 +56,8 @@ function createWindow(): void {
       : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
-      webviewTag: true
+      // sandbox disabled; see comment above
+      sandbox: false
     }
   })
 
@@ -85,7 +87,7 @@ app.whenReady().then(async () => {
   await initApp()
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.andersang.panopticon')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -93,9 +95,6 @@ app.whenReady().then(async () => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
-  // Register all IPC handlers
-  registerIpcHandlers()
 
   createWindow()
 
@@ -117,8 +116,9 @@ app.on('window-all-closed', () => {
 
 // Cleanup on app quit
 app.on('before-quit', async () => {
-  console.log('App quitting, cleaning up temp files...')
+  logger.info('App quitting, cleaning up…')
   await pdfTempService.cleanupAllTempFiles()
+  await tesseractOcrService.dispose()
 })
 
 // In this file you can include the rest of your app's specific main process

@@ -1,40 +1,15 @@
 import { app } from 'electron'
-import * as fs from 'fs'
+import { readFile, writeFile, mkdir, access, unlink, stat, constants } from 'fs/promises'
 import * as path from 'path'
-import { promisify } from 'util'
+import { settingsLogger } from '../utils/logger'
+import type { DirectorySettings, Directory, AppSettings } from '../../shared/types'
 
-const readFile = promisify(fs.readFile)
-const writeFile = promisify(fs.writeFile)
-const mkdir = promisify(fs.mkdir)
-const access = promisify(fs.access)
-
-export interface DirectorySettings {
-  watchForChanges: boolean
-  excludePatterns: string[]
-  fileTypes: string[]
-}
-
-export interface Directory {
-  path: string
-  name: string
-  addedAt: string
-  exists: boolean
-  settings: DirectorySettings
-  lastAccessed: string
-}
-
-export interface AppSettings {
-  initTime?: string
-  systemType?: string
-  offlineMode?: boolean
-  collections?: Record<string, any>
-  directories: Record<string, Directory>
-}
+export type { DirectorySettings, Directory, AppSettings }
 
 class SettingsService {
   private settingsPath: string
   private settingsDir: string
-  private settings: AppSettings | null = null
+  private settings: AppSettings | undefined = undefined
   private settingsFileExists = false
 
   constructor() {
@@ -50,16 +25,16 @@ class SettingsService {
   async init(): Promise<void> {
     try {
       // Check if settings file exists
-      await access(this.settingsPath, fs.constants.F_OK)
+      await access(this.settingsPath, constants.F_OK)
       this.settingsFileExists = true
 
       // Load settings
       const data = await readFile(this.settingsPath, 'utf-8')
       this.settings = JSON.parse(data)
-      console.log('Settings loaded successfully from:', this.settingsPath)
-    } catch (error) {
+      settingsLogger.info('Settings loaded successfully from:', this.settingsPath)
+    } catch {
       // Settings file doesn't exist - this is fine on first run
-      console.log('No existing settings file found at:', this.settingsPath)
+      settingsLogger.info('No existing settings file found at:', this.settingsPath)
       this.settingsFileExists = false
       this.settings = {
         collections: {},
@@ -108,7 +83,7 @@ class SettingsService {
    */
   async addDirectory(id: string, directory: Directory): Promise<void> {
     if (!this.settings) {
-      this.settings = { directories: {} }
+      this.settings = { collections: {}, directories: {}, offlineMode: false }
     }
 
     this.settings.directories[id] = directory
@@ -179,9 +154,8 @@ class SettingsService {
     }
 
     await Promise.all(
-      Object.entries(this.settings.directories).map(async ([_id, dir]) => {
-        const exists = await fs.promises
-          .stat(dir.path)
+      Object.entries(this.settings.directories).map(async ([, dir]) => {
+        const exists = await stat(dir.path)
           .then(() => true)
           .catch(() => false)
         dir.exists = exists
@@ -195,15 +169,9 @@ class SettingsService {
    * Create default settings file
    */
   async createDefaultSettings(offlineMode: boolean = true): Promise<void> {
-    // Get current date/time in YYYYMMDD-HHMMSS format
     const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-    const hours = String(now.getHours()).padStart(2, '0')
-    const minutes = String(now.getMinutes()).padStart(2, '0')
-    const seconds = String(now.getSeconds()).padStart(2, '0')
-    const initTime = `${year}${month}${day}-${hours}${minutes}${seconds}`
+    const iso = now.toISOString()
+    const initTime = iso.slice(0, 10).replace(/-/g, '') + '-' + iso.slice(11, 19).replace(/:/g, '')
 
     // Get system type
     const systemType =
@@ -221,7 +189,7 @@ class SettingsService {
     // Save to disk (this will create the folder and file)
     await this.saveSettings()
 
-    console.log('Default settings created at:', this.settingsPath)
+    settingsLogger.info('Default settings created at:', this.settingsPath)
   }
 
   /**
@@ -232,16 +200,16 @@ class SettingsService {
       // Ensure the Panopticon directory exists
       try {
         await mkdir(this.settingsDir, { recursive: true })
-      } catch (error) {
+      } catch {
         // Directory might already exist, that's fine
       }
 
       // Write settings to file
       await writeFile(this.settingsPath, JSON.stringify(this.settings, null, 2), 'utf-8')
       this.settingsFileExists = true
-      console.log('Settings saved successfully to:', this.settingsPath)
+      settingsLogger.info('Settings saved successfully to:', this.settingsPath)
     } catch (error) {
-      console.error('Error saving settings:', error)
+      settingsLogger.error('Error saving settings:', error)
       throw error
     }
   }
@@ -250,12 +218,13 @@ class SettingsService {
    * Update offline mode setting
    */
   async updateOfflineMode(offlineMode: boolean): Promise<void> {
-    await this.init() // Reload settings from disk
-    if (this.settings) {
-      this.settings.offlineMode = offlineMode
-      await this.saveSettings()
-      console.log(`Offline mode updated to: ${offlineMode}`)
+    if (!this.settings) {
+      settingsLogger.warn('updateOfflineMode called before settings are initialized')
+      return
     }
+    this.settings.offlineMode = offlineMode
+    await this.saveSettings()
+    settingsLogger.info(`Offline mode updated to: ${offlineMode}`)
   }
 
   /**
@@ -264,13 +233,13 @@ class SettingsService {
   async reset(): Promise<void> {
     try {
       if (this.settingsFileExists) {
-        await promisify(fs.unlink)(this.settingsPath)
+        await unlink(this.settingsPath)
         this.settingsFileExists = false
       }
-      this.settings = { directories: {} }
-      console.log('Settings reset successfully')
+      this.settings = { collections: {}, directories: {}, offlineMode: false }
+      settingsLogger.info('Settings reset successfully')
     } catch (error) {
-      console.error('Error resetting settings:', error)
+      settingsLogger.error('Error resetting settings:', error)
       throw error
     }
   }

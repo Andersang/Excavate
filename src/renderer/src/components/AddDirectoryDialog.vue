@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { emitDirectoryAdded } from '@/utils/appEvents'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,7 @@ interface Props {
 
 interface Emits {
   (e: 'update:open', value: boolean): void
-  (e: 'directory-added'): void
+  (e: 'directory-added', directoryId: string): void
 }
 
 defineProps<Props>()
@@ -26,12 +27,15 @@ const emit = defineEmits<Emits>()
 const selectedPath = ref<string>('')
 const directoryName = ref<string>('')
 const fileTypes = ref({
-  pdf: true
+  pdf: true,
+  md: false,
+  txt: false
 })
+const watchForChanges = ref(true)
 const isProcessing = ref(false)
 const error = ref<string>('')
 
-const browseDirectory = async () => {
+const browseDirectory = async (): Promise<void> => {
   const path = await window.api.dialog.openDirectory()
   if (path) {
     selectedPath.value = path
@@ -42,14 +46,14 @@ const browseDirectory = async () => {
   }
 }
 
-const handleAdd = async () => {
+const handleAdd = async (): Promise<void> => {
   if (!selectedPath.value) {
     error.value = 'Please select a directory'
     return
   }
 
   const selectedFileTypes = Object.entries(fileTypes.value)
-    .filter(([_, enabled]) => enabled)
+    .filter(([, enabled]) => enabled)
     .map(([type]) => type)
 
   if (selectedFileTypes.length === 0) {
@@ -69,7 +73,7 @@ const handleAdd = async () => {
       addedAt: new Date().toISOString(),
       exists: true,
       settings: {
-        watchForChanges: true, // Enable auto-watching by default
+        watchForChanges: watchForChanges.value,
         excludePatterns: [],
         fileTypes: selectedFileTypes
       },
@@ -79,12 +83,11 @@ const handleAdd = async () => {
     // Reset form and close
     selectedPath.value = ''
     directoryName.value = ''
-    fileTypes.value = { pdf: true }
+    fileTypes.value = { pdf: true, md: false, txt: false }
+    watchForChanges.value = true
     emit('update:open', false)
-    emit('directory-added')
-
-    // Dispatch global event for other views to listen
-    window.dispatchEvent(new CustomEvent('directory-added'))
+    emit('directory-added', id)
+    emitDirectoryAdded(id)
   } catch (err) {
     error.value = (err as Error).message
   } finally {
@@ -92,10 +95,11 @@ const handleAdd = async () => {
   }
 }
 
-const handleCancel = () => {
+const handleCancel = (): void => {
   selectedPath.value = ''
   directoryName.value = ''
-  fileTypes.value = { pdf: true }
+  fileTypes.value = { pdf: true, md: false, txt: false }
+  watchForChanges.value = true
   error.value = ''
   emit('update:open', false)
 }
@@ -115,15 +119,16 @@ const handleCancel = () => {
       <div class="space-y-4 py-4">
         <!-- Directory Selection -->
         <div class="space-y-2">
-          <label class="text-sm font-medium">Directory</label>
+          <label for="dir-path" class="text-sm font-medium">Directory</label>
           <div class="flex gap-2">
             <Input
+              id="dir-path"
               v-model="selectedPath"
               placeholder="No directory selected"
               readonly
               class="flex-1"
             />
-            <Button @click="browseDirectory" variant="outline">Browse</Button>
+            <Button variant="outline" @click="browseDirectory">Browse</Button>
           </div>
           <p v-if="selectedPath" class="text-sm text-muted-foreground">Name: {{ directoryName }}</p>
         </div>
@@ -136,7 +141,26 @@ const handleCancel = () => {
               <input v-model="fileTypes.pdf" type="checkbox" class="w-4 h-4 rounded border-input" />
               <span class="text-sm">PDF (.pdf)</span>
             </label>
+            <label class="hidden flex items-center gap-2 cursor-pointer">
+              <input v-model="fileTypes.md" type="checkbox" class="w-4 h-4 rounded border-input" />
+              <span class="text-sm">Markdown (.md)</span>
+            </label>
+            <label class="hidden flex items-center gap-2 cursor-pointer">
+              <input v-model="fileTypes.txt" type="checkbox" class="w-4 h-4 rounded border-input" />
+              <span class="text-sm">Plain Text (.txt)</span>
+            </label>
           </div>
+        </div>
+
+        <!-- Watch for Changes -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium">Auto-watch for Changes</label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="watchForChanges" type="checkbox" class="w-4 h-4 rounded border-input" />
+            <span class="text-sm text-muted-foreground"
+              >Automatically re-index when files change</span
+            >
+          </label>
         </div>
 
         <!-- Error Message -->
@@ -146,8 +170,8 @@ const handleCancel = () => {
       </div>
 
       <DialogFooter>
-        <Button @click="handleCancel" variant="outline" :disabled="isProcessing"> Cancel </Button>
-        <Button @click="handleAdd" :disabled="isProcessing">
+        <Button variant="outline" :disabled="isProcessing" @click="handleCancel"> Cancel </Button>
+        <Button :disabled="isProcessing" @click="handleAdd">
           {{ isProcessing ? 'Adding...' : 'Add Directory' }}
         </Button>
       </DialogFooter>
