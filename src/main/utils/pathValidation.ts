@@ -19,7 +19,7 @@ export function getAllowedRoots(): string[] {
   return [
     ...Object.values(settingsService.getDirectories()).map((d) => safeRealpath(d.path)),
     safeRealpath(app.getPath('userData')),
-    safeRealpath(path.join(app.getPath('documents'), 'Panopticon'))
+    safeRealpath(path.join(app.getPath('documents'), 'Excavate'))
   ]
 }
 
@@ -29,7 +29,7 @@ export function getAllowedRoots(): string[] {
  * Allowed roots are:
  * - Every directory path currently registered in settings
  * - The Electron `userData` directory (for processed JSON, settings, etc.)
- * - `<Documents>/Panopticon` (legacy / first-run location)
+ * - `<Documents>/Excavate` (legacy / first-run location)
  *
  * @param filePath - Absolute or relative path supplied by the renderer.
  * @param cachedRoots - Optional pre-cached allowed roots to prevent TOCTOU issues.

@@ -1,6 +1,6 @@
-# Contributing to Panopticon
+# Contributing to Excavate
 
-Thank you for your interest in contributing to Panopticon! This document is currently a placeholder as the repository is private.
+Thank you for your interest in contributing to Excavate! This document is currently a placeholder as the repository is private.
 
 ## Current Status
 

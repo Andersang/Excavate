@@ -281,9 +281,9 @@ onUnmounted(() => {
     >
       <div class="flex flex-col overflow-hidden h-full">
         <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b shrink-0">
+        <div class="flex items-center justify-between p-6 border-b shrink-0">
           <div>
-            <h1 class="text-2xl font-bold">Bookmarks</h1>
+            <h1 class="truncate">Bookmarks</h1>
             <p class="text-sm text-muted-foreground">
               {{ filteredBookmarks.length }} bookmark{{ filteredBookmarks.length !== 1 ? 's' : '' }}
             </p>

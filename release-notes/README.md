@@ -1,6 +1,6 @@
 # Release Notes
 
-This directory contains release notes for each version of Panopticon.
+This directory contains release notes for each version of Excavate.
 
 ## Format
 

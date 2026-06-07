@@ -4,15 +4,15 @@ This guide will help you set up the two-repository workflow where your private r
 
 ## Overview
 
-- **Private Repo**: `Andersang/Panopticon` (your current repo) - Contains source code
-- **Public Repo**: `Andersang/Panopticon` (to be created) - Contains only releases and documentation
+- **Private Repo**: `Andersang/Excavate` (your current repo) - Contains source code
+- **Public Repo**: `Andersang/Excavate` (to be created) - Contains only releases and documentation
 
 ## Step-by-Step Setup
 
 ### 1. Create the Public Repository
 
 1. Go to https://github.com/new
-2. **Repository name**: `Panopticon`
+2. **Repository name**: `Excavate`
 3. **Visibility**: **Public** ✓
 4. **Initialize**: Do NOT check any boxes (we'll push content from here)
 5. Click **Create repository**
@@ -20,7 +20,7 @@ This guide will help you set up the two-repository workflow where your private r
 ### 2. Create Personal Access Token (PAT)
 
 1. Go to https://github.com/settings/tokens/new
-2. **Note**: `Panopticon Release Publisher`
+2. **Note**: `Excavate Release Publisher`
 3. **Expiration**: Choose your preference (recommend 1 year)
 4. **Select scopes**:
    - ✓ `repo` (all sub-options)
@@ -30,7 +30,7 @@ This guide will help you set up the two-repository workflow where your private r
 
 ### 3. Add Token as Secret to Private Repo
 
-1. Go to your private repo: https://github.com/Andersang/Panopticon/settings/secrets/actions
+1. Go to your private repo: https://github.com/Andersang/Excavate/settings/secrets/actions
 2. Click **New repository secret**
 3. **Name**: `PUBLIC_REPO_TOKEN`
 4. **Secret**: Paste the PAT you just created
@@ -60,7 +60,7 @@ git add .
 git commit -m "Initial setup for public releases repository"
 
 # Add remote and push
-git remote add origin https://github.com/Andersang/Panopticon.git
+git remote add origin https://github.com/Andersang/Excavate.git
 git push -u origin main
 
 # Return to main repo and cleanup
@@ -72,7 +72,7 @@ Remove-Item -Recurse -Force temp-public-repo
 
 ```powershell
 # Make sure you're in your private repo
-cd C:\Users\AA\Documents\Development\Panopticon
+cd C:\Users\AA\Documents\Development\Excavate
 
 # Create a test tag
 git tag -a v0.1.0 -m "Initial release"
@@ -89,7 +89,7 @@ The GitHub Action will:
 
 ### 6. Verify the Release
 
-1. Go to: https://github.com/Andersang/Panopticon/releases
+1. Go to: https://github.com/Andersang/Excavate/releases
 2. You should see your release with the `.exe` file attached
 3. Test the download link works publicly (try in incognito mode)
 
@@ -109,12 +109,12 @@ That's it! GitHub Actions handles the rest automatically.
 
 Share this URL for downloads:
 ```
-https://github.com/Andersang/Panopticon/releases/latest
+https://github.com/Andersang/Excavate/releases/latest
 ```
 
 Or for specific version:
 ```
-https://github.com/Andersang/Panopticon/releases/download/vX.Y.Z/Panopticon-Setup-X.Y.Z.exe
+https://github.com/Andersang/Excavate/releases/download/vX.Y.Z/Excavate-Setup-X.Y.Z.exe
 ```
 
 ## Troubleshooting
@@ -125,7 +125,7 @@ https://github.com/Andersang/Panopticon/releases/download/vX.Y.Z/Panopticon-Setu
 
 ### Release not appearing in public repo
 - Check GitHub Actions tab in private repo for error logs
-- Verify public repo name is correct: `Andersang/Panopticon`
+- Verify public repo name is correct: `Andersang/Excavate`
 
 ### Token Expired
 - Generate new PAT following Step 2
@@ -137,8 +137,8 @@ If you want to update the README or other docs in the public repo:
 
 ```powershell
 # Clone public repo
-git clone https://github.com/Andersang/Panopticon.git
-cd Panopticon
+git clone https://github.com/Andersang/Excavate.git
+cd Excavate
 
 # Make changes to README.md, etc.
 # Commit and push

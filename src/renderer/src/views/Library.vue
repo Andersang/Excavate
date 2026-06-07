@@ -389,7 +389,7 @@ const checkIfProcessed = async (
     const directory = pathParts.slice(0, -1).join('/')
 
     // Check if processed JSON exists
-    const processedPath = `${directory}/panopticon-processed/${fileNameWithoutExt}-processed.json`
+    const processedPath = `${directory}/Excavate-processed/${fileNameWithoutExt}-processed.json`
     const exists = await window.api.file.exists(processedPath)
 
     if (!exists) {
@@ -564,7 +564,7 @@ const processSelectedFiles = (): void => {
               const fileNameWithoutExt =
                 fileName.substring(0, fileName.lastIndexOf('.')) || fileName
               const sep = file.path.includes('\\') ? '\\' : '/'
-              const processedPath = `${dir}${sep}panopticon-processed${sep}${fileNameWithoutExt}-processed.json`
+              const processedPath = `${dir}${sep}Excavate-processed${sep}${fileNameWithoutExt}-processed.json`
               try {
                 await window.api.file.delete(processedPath)
               } catch (deleteError) {

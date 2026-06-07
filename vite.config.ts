@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, externalizeDepsPlugin, bytecodePlugin, type Plugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { readmePlugin } from './vite-plugin-readme'
 
 // Preload-specific helper: remove the bytecode plugin when building the
 // Preload-specific helper: remove any bytecode artifacts after the
@@ -96,6 +97,7 @@ export default defineConfig({
         '@': resolve(__dirname, './src/renderer/src')
       }
     },
-    plugins: [vue(), tailwindcss(), tsconfigPaths()]
+    publicDir: resolve(__dirname, 'public'),
+    plugins: [vue(), tailwindcss(), tsconfigPaths(), readmePlugin()]
   }
 })

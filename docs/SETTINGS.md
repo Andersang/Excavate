@@ -1,10 +1,10 @@
 # Settings Service
 
-The settings service manages user settings and directory configurations for Panopticon.
+The settings service manages user settings and directory configurations for Excavate.
 
 ## Overview
 
-- Settings are stored in `%USERPROFILE%\Documents\Panopticon\settings.json`
+- Settings are stored in `%USERPROFILE%\Documents\Excavate\settings.json`
 - Settings are automatically loaded on app startup
 - If no settings file exists, the app starts with an empty configuration
 - All settings operations are persisted to disk automatically
@@ -125,7 +125,7 @@ The settings service is implemented in `src/main/services/settingsService.ts` fo
 2. Loads existing settings from disk if available
 3. Provides methods for CRUD operations on settings
 4. Automatically persists changes to disk
-5. Creates the Panopticon directory in Documents if it doesn't exist
+5. Creates the Excavate directory in Documents if it doesn't exist
 
 ## Type Definitions
 

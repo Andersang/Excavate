@@ -203,7 +203,7 @@ function _chunkParts(parts: Array<{ level: number; text: string }>): PageContent
 function _getProcessedJsonPath(filePath: string): string {
   const dir = path.dirname(filePath)
   const baseName = path.basename(filePath, path.extname(filePath))
-  return path.join(dir, 'panopticon-processed', `${baseName}-processed.json`)
+  return path.join(dir, 'Excavate-processed', `${baseName}-processed.json`)
 }
 
 async function _isAlreadyProcessed(filePath: string): Promise<ProcessedDocument | null> {

@@ -260,7 +260,7 @@ class TesseractOcrService {
   private _getProcessedJsonPath(filePath: string): string {
     const dir = path.dirname(filePath)
     const fileName = path.basename(filePath, path.extname(filePath))
-    return path.join(dir, 'panopticon-processed', `${fileName}-processed.json`)
+    return path.join(dir, 'Excavate-processed', `${fileName}-processed.json`)
   }
 
   private async _isAlreadyProcessed(filePath: string): Promise<boolean> {

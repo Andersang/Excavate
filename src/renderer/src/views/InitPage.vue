@@ -37,7 +37,7 @@ const createDefaultSettings = async (): Promise<void> => {
         <div class="max-w-2xl w-full space-y-8">
           <!-- Header -->
           <div class="text-center space-y-3">
-            <h1>Welcome to Panopticon</h1>
+            <h1>Welcome to Excavate</h1>
             <p class="text-xl text-muted-foreground">
               Your offline-first document search companion
             </p>
@@ -47,7 +47,7 @@ const createDefaultSettings = async (): Promise<void> => {
           <div class="bg-accent/30 rounded-lg p-8 space-y-6 border border-accent">
             <div class="space-y-4">
               <p class="leading-relaxed">
-                Panopticon helps you search through PDFs and other documents with powerful OCR and
+                Excavate helps you search through PDFs and other documents with powerful OCR and
                 indexing capabilities.
               </p>
 

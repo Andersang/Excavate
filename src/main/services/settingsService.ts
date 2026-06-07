@@ -15,7 +15,7 @@ class SettingsService {
   constructor() {
     // Get user's Documents folder
     const documentsPath = app.getPath('documents')
-    this.settingsDir = path.join(documentsPath, 'Panopticon')
+    this.settingsDir = path.join(documentsPath, 'Excavate')
     this.settingsPath = path.join(this.settingsDir, 'settings.json')
   }
 
@@ -197,7 +197,7 @@ class SettingsService {
    */
   private async saveSettings(): Promise<void> {
     try {
-      // Ensure the Panopticon directory exists
+      // Ensure the Excavate directory exists
       try {
         await mkdir(this.settingsDir, { recursive: true })
       } catch {

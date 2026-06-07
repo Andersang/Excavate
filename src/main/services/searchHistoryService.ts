@@ -40,7 +40,7 @@ class SearchHistoryService {
 
   constructor() {
     const documentsPath = app.getPath('documents')
-    this.searchesDir = path.join(documentsPath, 'Panopticon', 'saved-searches')
+    this.searchesDir = path.join(documentsPath, 'Excavate', 'saved-searches')
     this.savedSearchesPath = path.join(this.searchesDir, 'saved-searches.json')
     this.historyPath = path.join(this.searchesDir, 'search-history.json')
   }

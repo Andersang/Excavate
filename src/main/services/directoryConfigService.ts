@@ -2,7 +2,7 @@ import { readFile, writeFile, access } from 'fs/promises'
 import { join } from 'path'
 import type { DirectoryConfig } from '../../shared/types'
 
-const CONFIG_FILE_NAME = 'panopticon.directory.json'
+const CONFIG_FILE_NAME = 'Excavate.directory.json'
 
 const EMPTY_CONFIG: DirectoryConfig = {
   createdAt: '',

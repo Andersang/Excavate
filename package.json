@@ -1,10 +1,10 @@
 {
-  "name": "panopticon",
-  "version": "0.2.1",
-  "description": "Panopticon is a desktop application for managing and searching through PDF documents with advanced text extraction and bookmarking capabilities.",
+  "name": "Excavate",
+  "version": "0.2.2",
+  "description": "Excavate is a desktop application for managing and searching through PDF documents with advanced text extraction and bookmarking capabilities.",
   "main": "./out/main/index.js",
   "author": "andersang.com",
-  "homepage": "https://github.com/Andersang/Panopticon",
+  "homepage": "https://github.com/Andersang/Excavate",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",

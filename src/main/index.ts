@@ -87,7 +87,7 @@ app.whenReady().then(async () => {
   await initApp()
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.andersang.panopticon')
+  electronApp.setAppUserModelId('com.andersang.Excavate')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

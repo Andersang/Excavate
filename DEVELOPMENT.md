@@ -1,4 +1,4 @@
-# Panopticon — Developer Guide
+# Excavate — Developer Guide
 
 A practical reference for working on this codebase. Covers the architecture, data flows, IPC contract, and common patterns.
 
@@ -115,7 +115,7 @@ Every `window.api.xxx()` call maps to an `ipcMain.handle('channel', ...)` regist
 | `handlers.ts` | `get-app-version`, `ping`, `dialog:open-directory`, `shell:open-external`, `file:*` | misc / shell |
 | `directoryHandlers.ts` | `directory:*` | directory config, indexing, file-watching, tag updates |
 | `pdfHandlers.ts` | `pdf:*` | page count, temp-file rendering |
-| `bookmarkHandlers.ts` | `bookmark:*` | CRUD on `panopticon.directory.json` bookmark list |
+| `bookmarkHandlers.ts` | `bookmark:*` | CRUD on `Excavate.directory.json` bookmark list |
 | `documentProcessingHandlers.ts` | `document:*` | OCR orchestration |
 | `searchHistoryHandlers.ts` | `search:*` | saved search persistence |
 | `settingsHandlers.ts` | `settings:*` | app settings CRUD |
@@ -140,7 +140,7 @@ Every IPC handler that accepts a file-system path calls `isPathAllowed()` (from 
 
 - A directory path the user has added to their library (from `settingsService.getDirectories()`)
 - The Electron `userData` directory
-- `documents/Panopticon`
+- `documents/Excavate`
 
 Handlers return `{ success: false, error: 'Access denied' }` (or a safe default like `1` for page count) when the check fails.
 
@@ -152,10 +152,10 @@ Services live in `src/main/services/` and are exported as singletons. They have 
 
 | Service | Singleton export | Responsibility |
 |---|---|---|
-| `settingsService` | ✓ | Load/save `settings.json` in `documents/Panopticon/` |
+| `settingsService` | ✓ | Load/save `settings.json` in `documents/Excavate/` |
 | `directoryWatcherService` | ✓ | Wrap chokidar; debounce re-index triggers |
-| `bookmarkService` | ✓ | Read/write bookmark arrays inside `panopticon.directory.json` |
-| `searchHistoryService` | ✓ | Persist saved searches to `documents/Panopticon/saved-searches/` |
+| `bookmarkService` | ✓ | Read/write bookmark arrays inside `Excavate.directory.json` |
+| `searchHistoryService` | ✓ | Persist saved searches to `documents/Excavate/saved-searches/` |
 | `secureStorageService` | ✓ | AES-encrypted key-value JSON in `userData/secure-storage.dat` |
 | `documentProcessingService` | ✓ | Thin orchestrator — delegates to `tesseractOcrService` |
 | `tesseractOcrService` | ✓ | OCR via tesseract.js; per-file result cache keyed on `mtime + size` |
@@ -165,7 +165,7 @@ Services live in `src/main/services/` and are exported as singletons. They have 
 
 ### Cache Invalidation (OCR)
 
-`tesseractOcrService` caches processed results as `<filename>.panopticon.json` alongside the source file. On the next call it:
+`tesseractOcrService` caches processed results as `<filename>.Excavate.json` alongside the source file. On the next call it:
 1. Reads the cached JSON.
 2. Compares `cached.metadata.mtime` and `cached.metadata.fileSize` against a live `fs.stat()`.
 3. Re-processes if either value has changed.
@@ -176,18 +176,18 @@ Services live in `src/main/services/` and are exported as singletons. They have 
 
 | File | Location | Purpose |
 |---|---|---|
-| `settings.json` | `documents/Panopticon/settings.json` | All app config (directories, offlineMode) |
-| `panopticon.directory.json` | Inside each indexed directory | File index, tags, bookmarks, exclusion patterns |
-| `search-history.json` | `documents/Panopticon/saved-searches/search-history.json` | Recent searches |
-| `saved-searches.json` | `documents/Panopticon/saved-searches/saved-searches.json` | Saved & named searches |
+| `settings.json` | `documents/Excavate/settings.json` | All app config (directories, offlineMode) |
+| `Excavate.directory.json` | Inside each indexed directory | File index, tags, bookmarks, exclusion patterns |
+| `search-history.json` | `documents/Excavate/saved-searches/search-history.json` | Recent searches |
+| `saved-searches.json` | `documents/Excavate/saved-searches/saved-searches.json` | Saved & named searches |
 | `secure-storage.dat` | `userData/secure-storage.dat` | Encrypted key-value store |
 | `update-check.json` | `userData/update-check.json` | Last update-check timestamp |
-| `<file>.panopticon.json` | Next to each source document | OCR result cache |
+| `<file>.Excavate.json` | Next to each source document | OCR result cache |
 
 `userData` resolves to:
-- **Windows:** `%APPDATA%\panopticon`
-- **macOS:** `~/Library/Application Support/panopticon`
-- **Linux:** `~/.config/panopticon`
+- **Windows:** `%APPDATA%\Excavate`
+- **macOS:** `~/Library/Application Support/Excavate`
+- **Linux:** `~/.config/Excavate`
 
 ---
 

@@ -1,14 +1,14 @@
-# Panopticon
+# Excavate
 
 > A powerful desktop application for managing, searching, and organizing PDF documents with advanced OCR and bookmarking capabilities.
 
-[![Latest Release](https://img.shields.io/github/v/release/Andersang/Panopticon)](https://github.com/Andersang/Panopticon/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Andersang/Panopticon/total)](https://github.com/Andersang/Panopticon/releases)
+[![Latest Release](https://img.shields.io/github/v/release/Andersang/Excavate)](https://github.com/Andersang/Excavate/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Andersang/Excavate/total)](https://github.com/Andersang/Excavate/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 ## 📥 Download
 
-**[Download Latest Version](https://github.com/Andersang/Panopticon/releases/latest)**
+**[Download Latest Version](https://github.com/Andersang/Excavate/releases/latest)**
 
 ### System Requirements
 - **OS**: Windows 10/11 (64-bit)
@@ -55,9 +55,9 @@
 
 ## 🚀 Quick Start
 
-1. **Download** the latest installer from [Releases](https://github.com/Andersang/Panopticon/releases)
-2. **Run** the installer (`Panopticon-Setup-X.X.X.exe`)
-3. **Launch** Panopticon from Start Menu or Desktop
+1. **Download** the latest installer from [Releases](https://github.com/Andersang/Excavate/releases)
+2. **Run** the installer (`Excavate-Setup-X.X.X.exe`)
+3. **Launch** Excavate from Start Menu or Desktop
 4. **Add Directory** - Click the "+" button to add folders containing PDFs
 5. **Start Browsing** - Your PDFs will be automatically indexed
 

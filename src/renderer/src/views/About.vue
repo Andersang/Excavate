@@ -109,7 +109,7 @@ const openDownloadPage = (): void => {
   <ScrollArea class="h-full">
     <div class="p-8 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 class="text-3xl font-headers mb-2">About Panopticon</h1>
+        <h1 class="text-3xl font-headers mb-2">About Excavate</h1>
         <p class="text-muted-foreground">Version {{ version }}</p>
       </div>
 

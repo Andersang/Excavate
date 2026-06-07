@@ -16,7 +16,7 @@ class PdfTempService {
 
   constructor() {
     // Use app's temp directory with a subfolder for our PDFs
-    this.tempDir = path.join(app.getPath('temp'), 'panopticon-pdfs')
+    this.tempDir = path.join(app.getPath('temp'), 'Excavate-pdfs')
   }
 
   /**

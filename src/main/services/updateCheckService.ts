@@ -14,7 +14,7 @@ interface UpdateCheckResult {
 }
 
 class UpdateCheckService {
-  private readonly GITHUB_REPO = 'Andersang/Panopticon' // Update with your GitHub username/repo
+  private readonly GITHUB_REPO = 'Andersang/Excavate' // Update with your GitHub username/repo
   private readonly CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 hours
   private _lastCheck = 0
   private readonly _statePath = path.join(app.getPath('userData'), 'update-check.json')
@@ -48,7 +48,7 @@ class UpdateCheckService {
         {
           headers: {
             Accept: 'application/vnd.github.v3+json',
-            'User-Agent': 'Panopticon-App'
+            'User-Agent': 'Excavate-App'
           }
         }
       )

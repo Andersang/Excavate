@@ -15,7 +15,7 @@ onMounted(async () => {
     style="-webkit-app-region: drag"
   >
     <span class="text-sm leading-none">
-      Panopticon<span v-if="appVersion" class="text-muted-foreground"> v{{ appVersion }}</span>
+      Excavate<span v-if="appVersion" class="text-muted-foreground"> v{{ appVersion }}</span>
     </span>
     <!-- Reserve space for Windows controls (approx 138px) -->
     <div class="w-[138px]"></div>

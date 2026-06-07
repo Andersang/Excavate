@@ -225,7 +225,7 @@ const buildSearchIndex = async (): Promise<{ index: Document<SearchDocument>; do
         const fileName = pathParts[pathParts.length - 1]
         const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName
         const fileDirectory = pathParts.slice(0, -1).join('/')
-        const processedPath = `${fileDirectory}/panopticon-processed/${fileNameWithoutExt}-processed.json`
+        const processedPath = `${fileDirectory}/Excavate-processed/${fileNameWithoutExt}-processed.json`
 
         try {
           const exists = await window.api.file.exists(processedPath)
